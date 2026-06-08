@@ -1,0 +1,15 @@
+{
+  "name": "manguet-shared-memory",
+  "owner": {
+    "name": "Benjamin Manguet",
+    "email": "benjamin.manguet@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "shared-memory",
+      "source": "./",
+      "description": "Mémoire d'équipe partagée par projet : vault git privé (un par équipe) branché sur la mémoire native de Claude Code, gouvernance par Pull Request.",
+      "version": "0.1.0"
+    }
+  ]
+}

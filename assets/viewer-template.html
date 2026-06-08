@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mémoire d'équipe — shared-memory</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e6e9ef;
+    --muted: #8b93a7; --accent: #6ea8fe; --chip: #222734;
+    --project: #2ea043; --reference: #d29922; --feedback: #a371f7; --user: #db61a2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0;
+           background: var(--bg); z-index: 10; }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .toolbar { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  input[type=search] { flex: 1; min-width: 220px; padding: 8px 12px; border-radius: 8px;
+        border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 14px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border);
+        background: var(--chip); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
+  .filter.active { color: var(--text); border-color: var(--accent); }
+  main { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+          padding: 16px 18px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+  .card .desc { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+           letter-spacing: .04em; }
+  .badge.project { background: rgba(46,160,67,.15); color: var(--project); }
+  .badge.reference { background: rgba(210,153,34,.15); color: var(--reference); }
+  .badge.feedback { background: rgba(163,113,247,.15); color: var(--feedback); }
+  .badge.user { background: rgba(219,97,162,.15); color: var(--user); }
+  .body { white-space: pre-wrap; font-size: 14px; }
+  .body code { background: #0b0d11; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .body .wl { color: var(--accent); }
+  .body h3 { font-size: 14px; margin: 12px 0 4px; }
+  .file { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+  .empty { color: var(--muted); text-align: center; padding: 40px; }
+  details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .index { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+           padding: 16px 18px; margin-bottom: 20px; }
+  .guide { display: grid; gap: 6px; }
+  .cmd { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .cmd code { background: #0b0d11; color: var(--accent); padding: 1px 6px; border-radius: 4px; }
+  .cmd span { color: var(--muted); font-size: 13px; }
+  #draft { display: grid; gap: 8px; margin: 10px 0; }
+  #draft input, #draft select, #draft textarea { padding: 7px 10px; border-radius: 8px;
+        border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+  #draft textarea { min-height: 80px; resize: vertical; }
+  .snippet { background: #0b0d11; border: 1px solid var(--border); border-radius: 8px;
+        padding: 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 13px; }
+  button { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--accent);
+        background: transparent; color: var(--accent); cursor: pointer; font: inherit; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mémoire d'équipe</h1>
+  <div class="meta" id="meta"></div>
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Rechercher dans la mémoire…">
+    <div class="filters" id="filters"></div>
+  </div>
+</header>
+<main>
+  <details class="index" open id="guideWrap">
+    <summary>Guide — commandes à lancer dans Claude Code</summary>
+    <div class="guide">
+      <div class="cmd"><code>/memory-setup &lt;url&gt;</code><span>Brancher le vault (une fois par projet)</span></div>
+      <div class="cmd"><code>/memory-list &lt;terme&gt;</code><span>Chercher dans la mémoire</span></div>
+      <div class="cmd"><code>/memory-import</code><span>Ajouter de la doc / un fait</span></div>
+      <div class="cmd"><code>/memory-promote</code><span>Proposer ses faits à l'équipe (PR)</span></div>
+      <div class="cmd"><code>/memory-review</code><span>Relire et valider les propositions</span></div>
+      <div class="cmd"><code>/memory-ui</code><span>Rouvrir cette vue</span></div>
+    </div>
+    <h3 style="margin-top:16px">Rédiger un fait</h3>
+    <p class="desc">Remplir, copier, puis lancer <code>/memory-import</code> dans Claude Code et coller le fait.</p>
+    <form id="draft">
+      <input id="d-name" placeholder="slug-kebab-case (ex: regle-tva-export)">
+      <input id="d-desc" placeholder="description en une ligne (sert au recall)">
+      <select id="d-type"><option value="project">project</option><option value="reference">reference</option></select>
+      <textarea id="d-body" placeholder="Le fait, concis et autonome…"></textarea>
+    </form>
+    <pre class="snippet" id="snippet"></pre>
+    <button id="copy">Copier le fait</button>
+    <span id="copied" style="display:none;color:var(--project);margin-left:8px">Copié</span>
+  </details>
+  <details class="index" id="indexWrap">
+    <summary>Index (MEMORY.md)</summary>
+    <div class="body" id="index"></div>
+  </details>
+  <div id="list"></div>
+</main>
+<script>
+const DATA = /*__DATA__*/;
+const TYPES = ["project", "reference", "feedback", "user"];
+let activeTypes = new Set(TYPES);
+let query = "";
+
+function esc(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function mdLite(s){
+  return esc(s)
+    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[\[([^\]]+)\]\]/g, '<span class="wl">[[$1]]</span>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
+function renderFilters(){
+  const el = document.getElementById('filters');
+  el.innerHTML = '';
+  TYPES.forEach(t => {
+    const n = DATA.facts.filter(f => f.type === t).length;
+    if (!n) return;
+    const b = document.createElement('span');
+    b.className = 'filter' + (activeTypes.has(t) ? ' active' : '');
+    b.textContent = `${t} (${n})`;
+    b.onclick = () => { activeTypes.has(t) ? activeTypes.delete(t) : activeTypes.add(t); renderFilters(); render(); };
+    el.appendChild(b);
+  });
+}
+
+function render(){
+  const list = document.getElementById('list');
+  const q = query.toLowerCase();
+  const items = DATA.facts.filter(f =>
+    activeTypes.has(f.type) &&
+    (!q || (f.name + f.description + f.body).toLowerCase().includes(q))
+  );
+  document.getElementById('meta').textContent =
+    `${DATA.count} fait(s) · ${items.length} affiché(s) · vault : ${DATA.vault}`;
+  if (!items.length){ list.innerHTML = '<div class="empty">Aucun fait ne correspond.</div>'; return; }
+  list.innerHTML = items.map(f => `
+    <div class="card">
+      <h2><span class="badge ${f.type}">${f.type}</span> ${esc(f.name)}</h2>
+      ${f.description ? `<div class="desc">${esc(f.description)}</div>` : ''}
+      <div class="body">${mdLite(f.body)}</div>
+      <div class="file">${esc(f.file)}</div>
+    </div>`).join('');
+}
+
+document.getElementById('q').addEventListener('input', e => { query = e.target.value; render(); });
+document.getElementById('index').innerHTML = mdLite(DATA.index || '(vide)');
+if (!DATA.index) document.getElementById('indexWrap').style.display = 'none';
+function buildSnippet(){
+  const v = id => document.getElementById(id).value.trim();
+  const name = v('d-name') || '<slug>';
+  const desc = v('d-desc') || '<description>';
+  const type = document.getElementById('d-type').value;
+  const body = v('d-body') || '<le fait>';
+  document.getElementById('snippet').textContent =
+    `---\nname: ${name}\ndescription: ${desc}\nmetadata:\n  type: ${type}\n---\n\n${body}`;
+}
+['d-name','d-desc','d-type','d-body'].forEach(id =>
+  document.getElementById(id).addEventListener('input', buildSnippet));
+buildSnippet();
+document.getElementById('copy').addEventListener('click', async () => {
+  const txt = document.getElementById('snippet').textContent;
+  try { await navigator.clipboard.writeText(txt); }
+  catch(e) {
+    const r = document.createRange(); r.selectNodeContents(document.getElementById('snippet'));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    try { document.execCommand('copy'); } catch(_){}
+  }
+  const c = document.getElementById('copied'); c.style.display = 'inline';
+  setTimeout(() => c.style.display = 'none', 1500);
+});
+
+renderFilters();
+render();
+</script>
+</body>
+</html>

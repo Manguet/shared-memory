@@ -1,0 +1,294 @@
+# Mémoire d'équipe partagée — Architecture
+
+> Outil de mémoire centralisée pour équipes utilisant Claude Code.
+> Objectif : que chaque membre (dev **et** non-dev / vibe coder) partage **une seule
+> source de vérité** par projet, puisse la consulter, y contribuer, et valider
+> collectivement ce qui devient canonique.
+
+---
+
+## 1. Le problème
+
+La mémoire native de Claude Code vit dans `~/.claude/projects/<slug>/memory/` :
+
+- **locale à chaque machine** (home de l'utilisateur),
+- **hors du dépôt git** du projet,
+- donc **jamais synchronisée** entre coéquipiers.
+
+Résultat : chaque Claude construit sa mémoire en silo. Les connaissances vivantes
+(chantiers, décisions, conventions découvertes) ne circulent pas dans l'équipe.
+
+Le seul « cerveau commun » existant aujourd'hui est `CLAUDE.md`, parce qu'il est
+versionné. Tout le reste est privé à chaque poste.
+
+---
+
+## 2. Faits techniques sur la mémoire native (fondations)
+
+- La mémoire = **des fichiers `.md` plats** (frontmatter YAML + corps + liens `[[wikilink]]`).
+  Pas de base de données. **C'est ce qui rend le partage possible.**
+- `<slug>` est **dérivé du chemin absolu du projet** (`/var/www/projetA` → `-var-www-projetA`).
+  → La mémoire est donc **déjà par-projet**.
+- **Lecture** : `MEMORY.md` (l'index) est injecté au démarrage de session ; le contenu
+  complet d'un fait est injecté à la demande (recall) quand le sujet devient pertinent.
+- **Écriture** : Claude écrit des fichiers (`Write`). Un humain peut éditer les mêmes
+  fichiers à la main → **mémoire bidirectionnelle humain ⇄ Claude**.
+
+**Conséquence clé :** le seul verrou pour partager, c'est de faire pointer
+`~/.claude/projects/<slug>/memory/` de chaque poste vers une **source commune**.
+
+---
+
+## 3. Principes de conception
+
+1. **Substrat = fichiers + git.** Le stockage et la synchro ne sont **pas** réécrits :
+   git fait collecte / comparaison / conflits / historique / redistribution. La source
+   de vérité reste des fichiers `.md` (Claude ne sait lire que ça).
+2. **Source unique, pas réconciliation de copies.** Tout le monde lit/écrit **une**
+   copie partagée → on supprime la divergence à la racine au lieu de la réparer en boucle.
+3. **Deux étages.** Mémoire locale libre (brouillon, perso) vs mémoire canonique
+   gouvernée (validée, partagée).
+4. **Outil ≠ contenu.** Le **plugin** (générique, partageable) est distinct des
+   **vaults** (privés, par équipe).
+5. **Multi-vault.** Un vault par projet/équipe ; le plugin est unique ; un registre
+   par-utilisateur relie les deux.
+6. **Léger et sans install.** L'outil vit **dans** Claude Code (que tout le monde a déjà),
+   pas dans une application séparée.
+
+---
+
+## 4. Les deux étages de mémoire
+
+```
+ÉTAGE 1 — LOCAL (libre, non gouverné)
+  • Claude écrit librement, sans friction
+  • type: user | feedback  → reste local (préférences perso), jamais partagé
+  • brouillons / observations à chaud
+  = working copy non commitée + .gitignore sur les fichiers perso
+
+          │  promotion EXPLICITE (fin de session de travail)
+          ▼
+
+ÉTAGE 2 — CANONIQUE (gouverné, source de vérité)
+  • type: project | reference uniquement
+  • entre via une étape de validation (pending → approuvé)
+  • main du vault = LA vérité, identique pour tous (git pull)
+```
+
+git sépare gratuitement les deux étages :
+- **working copy non commitée** = étage 1 (brouillon local) ;
+- **branche `main` mergée** = étage 2 (canonique) ;
+- `.gitignore` sur `feedback_*.md` / `type: user` → le perso ne fuite jamais.
+
+---
+
+## 5. Multi-vault : « chaque équipe son vault »
+
+La mémoire étant déjà par-projet (slug), chaque projet pointe vers le vault de son équipe.
+
+```
+Projet A (équipe 1)  /var/www/projetA   → slug -var-www-projetA  → memory → symlink → Vault A
+Projet B (équipe 2)  /home/x/projetB    → slug -home-x-projetB   → memory → symlink → Vault B
+```
+
+Trois niveaux distincts :
+
+| Niveau | Cardinalité | Visibilité | Contenu |
+|--------|-------------|------------|---------|
+| **Plugin (outil)** | 1, global | public (aucun secret) | skills, viewer, scripts |
+| **Vault (mémoire)** | N, un par équipe/projet | privé à l'équipe | `MEMORY.md` + faits `.md` |
+| **Registre (config)** | 1 par utilisateur | local, non versionné | mapping projet → vault → symlink |
+
+### Registre par-utilisateur : **JSON local** (pas de BDD)
+
+Une BDD centrale réintroduit un serveur à héberger → contraire à « simple, sans install ».
+On utilise un **JSON local par machine** (ex. `~/.config/shared-memory/registry.json`),
+non versionné, car les chemins/slugs diffèrent sur chaque poste.
+
+```jsonc
+// ~/.config/shared-memory/registry.json
+{
+  "projets": [
+    {
+      "slug": "-var-www-projetA",
+      "vault": "git@github.com:equipe1/projetA-memory.git",
+      "clone": "~/vaults/projetA-memory",
+      "symlink": "~/.claude/projects/-var-www-projetA/memory"
+    }
+  ]
+}
+```
+
+Le registre a **deux moitiés** : la partie **chemins** (locale, par machine — l'utilisateur
+clone le vault **où il veut**) et un **catalogue de vaults disponibles** (partagé : nom → URL),
+pour qu'un membre n'ait qu'à **choisir** son vault au setup. `/memory-setup` propose le
+catalogue et/ou accepte une URL explicite, clone à l'emplacement choisi, crée le symlink,
+écrit l'entrée locale.
+
+### Nommage des vaults : `<projet>-memory` (convention recommandée)
+
+Privés. Convention **recommandée** (pas imposée) : `negocian` → `negocian-memory`, rattaché
+au **projet** (pas à une personne ni une équipe). L'**emplacement et l'hébergement du vault
+sont libres** (chaque équipe le met où elle veut) ; le **catalogue** liste les vaults
+disponibles pour le setup.
+
+---
+
+## 6. Le plugin Claude Code
+
+L'outil n'est **pas** une application séparée : c'est un **plugin Claude Code**, installable
+depuis un dépôt GitHub (marketplace), donc **zéro install supplémentaire** — tout le monde
+a déjà Claude Code (les non-devs vibe codent avec).
+
+**Distribution publique, installation locale.** Le repo plugin est **public**
+(`github.com/Manguet/shared-memory`) — il ne contient aucun secret, juste l'outil. Le
+`marketplace.json` n'est **pas** un catalogue public : rien n'est listé ni découvrable
+ailleurs, c'est seulement le descripteur d'installation. L'install se fait par **script**
+(`install.sh`) qui clone le plugin en local puis l'active par **chemin local**
+(`/plugin marketplace add ~/.shared-memory/plugin`) — donc jamais référencé comme une
+marketplace GitHub publique. Le repo étant public, le `git clone` ne demande **pas** d'auth.
+
+### Pourquoi « dans Claude Code » et pas une app desktop
+
+- **Interface = la conversation**, que les vibe coders maîtrisent déjà.
+- **Git invisible** : les skills exécutent `clone`/`pull`/`commit`/`push`.
+- **WSL2 neutralisé** : Claude tourne dans WSL2, le vault et le symlink sont dans le
+  système de fichiers Linux de WSL2 → **aucune traversée de frontière Windows↔WSL2**
+  (la source de galères des apps natives Windows : symlinks instables, git lent sur
+  `/mnt/c`, file-watching défaillant).
+
+### Skills prévues
+
+| Skill | Rôle | Étape |
+|-------|------|-------|
+| `/memory-setup` | clone le vault du projet + crée le symlink (registre) | install |
+| `/memory-list` | consulter / chercher dans la mémoire | lecture |
+| `/memory-import` | **normaliser** un doc brut → faits au format mémoire | écriture |
+| `/memory-promote` | proposer mes faits locaux → `pending` (vérif contre le code) | écriture |
+| `/memory-review` | un référent valide `pending → canonique` | gouvernance |
+| `/memory-ui` | ouvrir l'interface visuelle (navigateur) | visualisation |
+
+> **Normaliser, pas importer-sync.** `/memory-import` transforme de la doc brute en
+> faits atomiques (frontmatter + 1 fait/fichier + ligne d'index). Le transport, c'est git.
+
+---
+
+## 7. Gouvernance = Pull Request git
+
+La validation passe par une **PR sur le vault**. `/memory-promote` ouvre une PR ;
+l'équipe voit le diff (faits markdown, lisibles), discute, approuve ou refuse. On
+récupère gratuitement traçabilité, fil de discussion et historique.
+
+### Deux surfaces de revue sur la même PR (devs + vibe coders)
+
+```
+/memory-promote  →  crée une PR (branche + push + gh pr create)
+                       │
+       ┌───────────────┴────────────────┐
+       ▼                                 ▼
+GitHub web (visuel)              /memory-review (dans Claude)
+diff, commentaires, approve      montre le diff, approuve/merge via gh
+→ pour ceux à l'aise avec git    → pour les vibe coders, en conversationnel
+```
+
+La PR est la même ; chacun valide là où il est à l'aise. Les non-devs ne sont pas
+forcés dans l'UI git.
+
+### Règle de merge (barrière)
+
+**Protection de branche** sur `main` du vault :
+- au moins **1 approbation** (d'un autre que l'auteur) avant merge ;
+- **pas d'auto-merge** de sa propre promotion.
+
+C'est le minimum pour garantir « on valide ensemble avant que ça devienne canonique ».
+Passer à 2 approbations si l'équipe veut plus de rigueur. La validation compte **plus**
+avec des vibe coders (ils produisent beaucoup de faits, dont des bancals).
+
+---
+
+## 8. Interface visuelle (en deux temps)
+
+Claude Code ne **dessine pas** d'UI custom (c'est un terminal). Mais une commande peut
+**lancer une interface externe** : ouvrir une page dans le navigateur déjà présent.
+Pattern : l'IA **demande confirmation** avant d'ouvrir l'URL.
+
+| Phase | Ce que c'est | Coût |
+|-------|--------------|------|
+| **Phase 1 — Visualisation** | un **fichier HTML autonome** qui affiche le vault (lecture, recherche, liens). Aucun serveur. | faible |
+| **Phase 2 — Guidage (sans backend)** | le viewer ajoute un encart **commandes** + un **générateur de fait** (snippet à copier → `/memory-import`) ; chaque skill termine par la **prochaine commande**. | faible |
+
+**Décision : pas d'UI d'écriture serveur.** L'écriture et la validation restent
+**conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) + l'UI
+PR de GitHub. Le viewer reste un **fichier HTML statique** : il *guide* (commandes, snippets)
+mais n'écrit jamais.
+
+> **Écarté :** un serveur local d'écriture, et a fortiori un « chat-agent » embarqué dans la
+> page. Ce dernier ne se branche pas sur la session Claude Code en cours (pas d'API exposée) :
+> il faudrait un agent séparé (Agent SDK/API) = backend + clé API + coût par token + surface de
+> sécurité. C'est **plus** lourd que le mini-serveur, et redondant avec les skills + GitHub. Le
+> « chat connecté à Claude » existe déjà : c'est Claude Code lui-même.
+
+Ouverture du navigateur cross-platform : `open` (Mac) · `wslview` / `cmd.exe start` (WSL2)
+· `xdg-open` (Linux). Un serveur localhost lancé dans WSL2 est joignable depuis le
+navigateur Windows (forwarding automatique).
+
+---
+
+## 9. Schéma d'ensemble
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  REPO PLUGIN (outil, PUBLIC)        REPOS VAULT (mémoire, privés, N)   ║
+║  • skills /memory-*                 • Vault équipe 1 (projet A)        ║
+║  • viewer HTML                      • Vault équipe 2 (projet B)        ║
+║  • scripts git/symlink/open         • … (MEMORY.md + faits .md)        ║
+╚═══════════════════════════════════════════════════════════════════════╝
+        │ installé une fois              ▲ pull (lecture) / push validé (écriture)
+        ▼                                │
+   ┌─────────────────────── poste utilisateur (dans WSL2 / macOS) ──────────────────┐
+   │  Claude Code  ──exécute──►  skills mémoire                                      │
+   │  registre par-user : slug → vault → clone → symlink                            │
+   │  ~/.claude/projects/<slug>/memory  ──symlink──►  clone du vault du projet      │
+   └────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 10. Risques (non techniques, décisifs)
+
+- **Discipline.** Si personne ne lance `/memory-promote` ni `/memory-review`, le
+  canonique se fige et devient obsolète — comme n'importe quelle doc. **À trancher :
+  qui est référent, à quelle fréquence valide-t-il, qu'est-ce qui déclenche une promotion ?**
+- **Versionnage du plugin.** Une mise à jour de l'outil doit être re-pull par chacun.
+- **Confiance.** Le repo plugin est **public** et exécute git, ouvre des navigateurs, lance
+  des scripts → garder le code lisible et **sans aucun secret**.
+- **Vault privé.** Ne jamais committer le contenu mémoire dans le repo public du plugin.
+
+---
+
+## 11. Décidé / à décider
+
+**Décidé :**
+- Substrat = fichiers + git (pas d'outil de sync maison).
+- Outil = plugin Claude Code (pas d'app desktop séparée).
+- Multi-vault : un vault privé par équipe/projet, plugin unique, registre par-user.
+- Deux étages (local libre / canonique gouverné).
+- **Gouvernance = PR git** (2 surfaces de revue : GitHub web + `/memory-review`),
+  protection de branche `main` avec ≥1 approbation, pas d'auto-merge.
+- **Registre = JSON local** par machine (pas de BDD).
+- **Nommage vault = `<projet>-memory`**, privé, sous une org GitHub.
+- **Distribution du plugin = repo public**, install **locale** par script `install.sh`
+  (clone + activation par chemin local). `marketplace.json` ≠ catalogue public (aucun
+  listing). Vaults restent privés.
+- Interface : viewer HTML statique (Phase 1) + **guidage sans backend** (Phase 2 : encart
+  commandes, générateur de fait/snippet, prochaine-commande dans les skills). Pas d'UI serveur
+  ni de chat embarqué — écriture/validation = skills + PR GitHub.
+
+- Repo plugin : `github.com/Manguet/shared-memory` (public).
+- Vault : emplacement/hébergement libres ; **catalogue de vaults disponibles** pour le setup.
+- Promotion = faits `type: project` + `type: reference` (jamais `user`/`feedback`).
+
+**À décider :**
+- Nombre d'approbations requis pour merger (1 par défaut, ou 2 pour plus de rigueur).
+- Ce qui déclenche une promotion (proposé : fin de session de travail).
+- Où vit le catalogue de vaults (dans le repo plugin, ou fichier de config dédié).

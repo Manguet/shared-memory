@@ -1,0 +1,19 @@
+# Config locale par-utilisateur (jamais versionnée dans le plugin)
+*.local.md
+.claude/*.local.md
+
+# Le registre vit dans ~/.config/shared-memory/, jamais ici
+registry.json
+
+# Cruft OS / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Node (si le viewer Phase 2 en a besoin)
+node_modules/
+
+# Python
+__pycache__/
+*.pyc

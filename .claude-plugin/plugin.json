@@ -1,0 +1,9 @@
+{
+  "name": "shared-memory",
+  "version": "0.1.0",
+  "description": "Mémoire d'équipe partagée par projet : branche la mémoire native de Claude Code sur un vault git privé (un par équipe), avec gouvernance par Pull Request.",
+  "author": {
+    "name": "Benjamin Manguet",
+    "email": "benjamin.manguet@gmail.com"
+  }
+}
