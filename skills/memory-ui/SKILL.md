@@ -26,14 +26,15 @@ serveur, aucune écriture** — Phase 1 de l'interface visuelle.
    construit `/tmp/shared-memory-view-<slug>.html` et l'ouvre selon l'OS
    (`wslview` sous WSL2, `open` sous macOS, `xdg-open` sous Linux).
 
-3. **Si l'ouverture échoue** (pas de navigateur détecté), communiquer le chemin du fichier
-   HTML généré pour que l'utilisateur l'ouvre manuellement.
+3. **Indiquer le lien cliquable** affiché par le script : un simple clic ouvre la mémoire
+   dans le navigateur. Le lien est toujours affiché, même sans ouverture automatique.
 
 ## Points d'attention
 
 - **Vault requis** : si le script renvoie « Vault introuvable », lancer `/memory-setup` d'abord.
-- **WSL2** : l'ouverture auto nécessite `wslview` (paquet `wslu`). Sans lui, le script imprime
-  le chemin à ouvrir à la main (le fichier est sous le système Linux de WSL2).
+- **Lien cliquable toujours affiché** : un lien `file://` cliquable dans le terminal (chemin
+  converti pour Windows sous WSL2). Si `wslview` (paquet `wslu`) est présent, le navigateur
+  s'ouvre aussi tout seul ; sinon, il suffit de cliquer le lien.
 - **Lecture seule** : ce viewer n'écrit jamais dans le vault. L'édition/validation passe par
   `/memory-promote` (Phase 1) ; un backend d'écriture viendra en Phase 2.
 

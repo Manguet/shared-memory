@@ -13,9 +13,7 @@ sur sa machine.
 
 - **Claude Code** (déjà installé si tu l'utilises pour coder).
 - **git**, **python3**.
-- **gh** (GitHub CLI) — pour proposer/valider des mémoires.
-- **WSL2 uniquement** : `wslu` (commande `wslview`) pour ouvrir le navigateur → `sudo apt install wslu`.
-- Un **compte GitHub** : le plugin est **public** (clone sans auth), mais l'accès au **vault privé** de l'équipe est requis pour `/memory-setup`. Auth la plus simple : `gh auth login`.
+- Un **compte GitHub** : le plugin est **public** (clone sans auth), mais l'accès au **vault privé** de l'équipe est requis pour `/memory-setup`. Auth : clé SSH ajoutée à GitHub, ou token HTTPS (voir §B.1).
 
 Vérifie tout d'un coup :
 
@@ -31,21 +29,28 @@ bash scripts/doctor.sh
 
 ### 1. Publier le plugin (repo public)
 
+Créer un repo **public** `shared-memory` sur github.com/Manguet (bouton *New repository*), puis :
+
 ```bash
 # depuis /var/www/shared-memory
 git add -A
 git commit -m "shared-memory: plugin initial"
-gh repo create Manguet/shared-memory --public --source=. --push
+git branch -M main
+git remote add origin https://github.com/Manguet/shared-memory.git
+git push -u origin main
 ```
 
 ### 2. Créer un vault par projet (repo privé)
 
+Créer un repo **privé** `<projet>-memory` sur github.com/Manguet, puis (exemple negocian) :
+
 ```bash
-# exemple pour le projet negocian
-gh repo create Manguet/negocian-memory --private --clone
-cd negocian-memory
+mkdir negocian-memory && cd negocian-memory
+git init -b main
 printf '# Memory\n' > MEMORY.md
-git add -A && git commit -m "vault: init" && git push
+git add -A && git commit -m "vault: init"
+git remote add origin git@github.com:Manguet/negocian-memory.git
+git push -u origin main
 ```
 
 Puis donner accès aux membres : repo → Settings → Collaborators.
@@ -53,10 +58,10 @@ Puis donner accès aux membres : repo → Settings → Collaborators.
 ### 3. Protéger la branche `main` du vault (la barrière de validation)
 
 Sur GitHub : repo du vault → **Settings → Branches → Add branch protection rule** sur `main` :
-- Require a pull request before merging
-- Require approvals → **1** (ou 2 pour plus de rigueur)
+- **Restrict who can push to matching branches** → seuls les **référents**.
 
-Ainsi une mémoire ne devient canonique qu'après **revue et approbation** par un coéquipier.
+Ainsi un membre ne peut pousser que des branches `promote/*` ; seul un référent fusionne dans
+`main` via `/memory-review`. La mémoire ne devient canonique qu'après cette revue.
 
 ### 4. (Optionnel) Renseigner le catalogue de vaults
 
@@ -70,11 +75,12 @@ commit/push. `/memory-setup` pourra les proposer.
 ### 1. S'authentifier à GitHub (une fois)
 
 Le plugin est public (clone sans auth), mais ton **vault d'équipe est privé** → auth requise
-pour le cloner à l'étape `/memory-setup`.
+pour le cloner à l'étape `/memory-setup`. Au choix :
 
-```bash
-gh auth login        # choisir GitHub.com → HTTPS → suivre les étapes
-```
+- **Clé SSH** (recommandé) : ajoute ta clé publique à GitHub (Settings → SSH and GPG keys).
+  Si ta clé a une passphrase, charge-la une fois par session : `ssh-add ~/.ssh/id_ed25519`.
+- **ou HTTPS + token** : crée un *Personal Access Token* et laisse git le mémoriser via son
+  credential helper.
 
 ### 2. Installer le plugin
 
@@ -109,8 +115,8 @@ C'est tout. À partir de là, la mémoire de ce projet est partagée. Les comman
 | `/memory-ui` | voir la mémoire (et le guide visuel) |
 | `/memory-list <terme>` | chercher |
 | `/memory-import` | ajouter de la doc / un fait |
-| `/memory-promote` | proposer ses faits à l'équipe (ouvre une PR) |
-| `/memory-review` | relire / approuver les propositions |
+| `/memory-promote` | proposer ses faits à l'équipe (pousse une branche) |
+| `/memory-review` | relire / fusionner les propositions (git) |
 
 ---
 
@@ -126,10 +132,10 @@ claude --plugin-dir /var/www/shared-memory
 ## Dépannage
 
 - **« Vault introuvable » à `/memory-ui`** → lancer `/memory-setup` d'abord.
-- **Le navigateur ne s'ouvre pas (WSL2)** → `sudo apt install wslu` ; sinon, ouvrir à la main
-  le chemin `/tmp/shared-memory-view-*.html` affiché.
-- **`git clone` du vault refusé** → accès non accordé au repo privé, ou auth GitHub absente
-  (`gh auth login`).
+- **Le navigateur ne s'ouvre pas tout seul (WSL2)** → cliquer le lien `file://…` affiché par
+  `/memory-ui` (toujours affiché et cliquable).
+- **`git clone` du vault refusé** → accès non accordé au repo privé, ou auth git absente
+  (clé SSH ajoutée à GitHub, ou token HTTPS).
 - **`~/.claude/projects/<slug>/` n'existe pas** → le projet n'a jamais été ouvert dans Claude
   Code à ce chemin. L'ouvrir une fois, puis relancer `/memory-setup`.
 - **`/plugin marketplace add` ne répond pas** → le repo plugin n'est pas encore poussé, ou ton

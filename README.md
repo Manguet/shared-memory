@@ -4,13 +4,13 @@ Plugin Claude Code de **mémoire d'équipe partagée par projet**.
 
 Branche la mémoire native de Claude Code (`~/.claude/projects/<slug>/memory/`, locale et non
 partagée) sur un **vault git privé** (un par équipe) : devs **et** vibe coders partagent
-**une seule source de vérité** par projet — consulter, contribuer, valider par PR — sans
+**une seule source de vérité** par projet — consulter, contribuer, valider par revue de branche git — sans
 application séparée.
 
 ## Idée en une phrase
 
 Mémoire native = fichiers `.md` locaux → symlink vers un **vault git** géré par le plugin,
-avec **viewer HTML** optionnel et **gouvernance par Pull Request**.
+avec **viewer HTML** optionnel et **gouvernance par revue de branche git**.
 
 ## Distinction essentielle
 
@@ -41,8 +41,8 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 | `/memory-setup` | clone le vault du projet + crée le symlink + écrit le registre local |
 | `/memory-list` | consulter / chercher dans la mémoire (conversationnel) |
 | `/memory-import` | normaliser un doc brut en faits mémoire (working copy) |
-| `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, ouvre une PR |
-| `/memory-review` | lister/relire/approuver/merger les PR mémoire depuis Claude |
+| `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, pousse une branche de proposition |
+| `/memory-review` | relire et fusionner les branches de proposition (git seul) |
 | `/memory-ui` | ouvre un viewer HTML autonome (lecture seule) du vault dans le navigateur |
 
 ## Démarrage
@@ -52,13 +52,12 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 /memory-setup git@github.com:<org>/<projet>-memory.git
 /memory-ui            # visualiser
 # … travail … puis en fin de session :
-/memory-promote       # proposer ses faits à l'équipe (PR)
+/memory-promote       # proposer ses faits (branche git)
 ```
 
 ## Prérequis
 
 - `git` authentifié (accès au vault privé), `python3`.
-- WSL2 : `wslu` (commande `wslview`) pour l'ouverture auto du navigateur.
 
 ## Structure
 
@@ -83,7 +82,7 @@ shared-memory/
 ## État
 
 Phases 1 & 2 implémentées (6 skills + viewer HTML avec guide/générateur de fait).
-Écriture et validation **conversationnelles** (skills) + PR GitHub — **pas de backend**.
+Écriture et validation **conversationnelles** (skills), revue de branche en git — **pas de backend**.
 Reste à faire côté équipe : créer le vault, commit/push du plugin, protection de branche.
 
 Conception complète : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

@@ -173,36 +173,32 @@ marketplace GitHub publique. Le repo étant public, le `git clone` ne demande **
 
 ---
 
-## 7. Gouvernance = Pull Request git
+## 7. Gouvernance = revue de branche (git seul)
 
-La validation passe par une **PR sur le vault**. `/memory-promote` ouvre une PR ;
-l'équipe voit le diff (faits markdown, lisibles), discute, approuve ou refuse. On
-récupère gratuitement traçabilité, fil de discussion et historique.
-
-### Deux surfaces de revue sur la même PR (devs + vibe coders)
+La validation se fait **en git**, sans `gh`. `/memory-promote` pousse une **branche de
+proposition** (`promote/…`) ; un **référent** la relit et la **fusionne dans `main`** via
+`/memory-review`. Traçabilité et historique restent assurés par git.
 
 ```
-/memory-promote  →  crée une PR (branche + push + gh pr create)
+/memory-promote  →  branche promote/<…> + commit + push
                        │
-       ┌───────────────┴────────────────┐
-       ▼                                 ▼
-GitHub web (visuel)              /memory-review (dans Claude)
-diff, commentaires, approve      montre le diff, approuve/merge via gh
-→ pour ceux à l'aise avec git    → pour les vibe coders, en conversationnel
+                       ▼
+   Un RÉFÉRENT (≠ auteur) relit via /memory-review :
+     git diff origin/main...origin/<branche>
+                       │
+              approuve │ refuse
+                       ▼
+     git merge --no-ff + git push origin main   →  canonique pour tous
 ```
 
-La PR est la même ; chacun valide là où il est à l'aise. Les non-devs ne sont pas
-forcés dans l'UI git.
+### Règle de fusion (barrière)
 
-### Règle de merge (barrière)
+**Protection de branche** sur `main` du vault (GitHub → Settings → Branches) :
+- **Restrict who can push to matching branches** → seuls les **référents** poussent sur `main`.
 
-**Protection de branche** sur `main` du vault :
-- au moins **1 approbation** (d'un autre que l'auteur) avant merge ;
-- **pas d'auto-merge** de sa propre promotion.
-
-C'est le minimum pour garantir « on valide ensemble avant que ça devienne canonique ».
-Passer à 2 approbations si l'équipe veut plus de rigueur. La validation compte **plus**
-avec des vibe coders (ils produisent beaucoup de faits, dont des bancals).
+Ainsi un vibe coder ne pousse que des branches `promote/*` ; seul un référent fusionne. Pas
+d'auto-validation (le référent n'est pas l'auteur). La validation compte **plus** avec des
+vibe coders (ils produisent beaucoup de faits, dont des bancals).
 
 ---
 
@@ -218,8 +214,8 @@ Pattern : l'IA **demande confirmation** avant d'ouvrir l'URL.
 | **Phase 2 — Guidage (sans backend)** | le viewer ajoute un encart **commandes** + un **générateur de fait** (snippet à copier → `/memory-import`) ; chaque skill termine par la **prochaine commande**. | faible |
 
 **Décision : pas d'UI d'écriture serveur.** L'écriture et la validation restent
-**conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) + l'UI
-PR de GitHub. Le viewer reste un **fichier HTML statique** : il *guide* (commandes, snippets)
+**conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) via git
+(revue de branche). Le viewer reste un **fichier HTML statique** : il *guide* (commandes, snippets)
 mais n'écrit jamais.
 
 > **Écarté :** un serveur local d'écriture, et a fortiori un « chat-agent » embarqué dans la
@@ -273,8 +269,8 @@ navigateur Windows (forwarding automatique).
 - Outil = plugin Claude Code (pas d'app desktop séparée).
 - Multi-vault : un vault privé par équipe/projet, plugin unique, registre par-user.
 - Deux étages (local libre / canonique gouverné).
-- **Gouvernance = PR git** (2 surfaces de revue : GitHub web + `/memory-review`),
-  protection de branche `main` avec ≥1 approbation, pas d'auto-merge.
+- **Gouvernance = revue de branche git** (sans `gh`) : `/memory-promote` pousse une branche,
+  `/memory-review` la fusionne ; `main` protégée (push restreint aux référents).
 - **Registre = JSON local** par machine (pas de BDD).
 - **Nommage vault = `<projet>-memory`**, privé, sous une org GitHub.
 - **Distribution du plugin = repo public**, install **locale** par script `install.sh`
@@ -282,7 +278,7 @@ navigateur Windows (forwarding automatique).
   listing). Vaults restent privés.
 - Interface : viewer HTML statique (Phase 1) + **guidage sans backend** (Phase 2 : encart
   commandes, générateur de fait/snippet, prochaine-commande dans les skills). Pas d'UI serveur
-  ni de chat embarqué — écriture/validation = skills + PR GitHub.
+  ni de chat embarqué — écriture/validation = skills (revue de branche git).
 
 - Repo plugin : `github.com/Manguet/shared-memory` (public).
 - Vault : emplacement/hébergement libres ; **catalogue de vaults disponibles** pour le setup.

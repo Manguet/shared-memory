@@ -17,7 +17,7 @@ registre local (`~/.config/shared-memory/registry.json`).
 La mémoire native est un dossier local par-machine, donc non partagée. Ce skill la remplace
 par un **symlink vers un clone d'un vault git** : dès lors, lecture et écriture de mémoire
 passent par le vault, partagé avec l'équipe. Voir `references/concepts.md` pour le modèle
-complet (deux étages, multi-vault, gouvernance par PR).
+complet (deux étages, multi-vault, gouvernance par revue de branche git).
 
 ## Procédure
 

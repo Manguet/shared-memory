@@ -10,7 +10,7 @@ version: 0.1.0
 
 Transforme de la doc brute (fichier ou contenu fourni) en **faits atomiques** au format
 mémoire, écrits dans le **clone du vault** (working copy = étage 1, local). Ces faits seront
-ensuite proposés à l'équipe via `/memory-promote`. Ce skill **n'ouvre pas de PR** lui-même.
+ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien** lui-même.
 
 ## Procédure
 
@@ -38,12 +38,12 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **n'ouvre pas de 
 5. **Mettre à jour `MEMORY.md`** (l'index) du vault : une ligne par nouveau fait
    (`- [Titre](fichier.md) — accroche`).
 
-6. **Confirmer** : lister les faits créés et rappeler que `/memory-promote` ouvrira la PR.
+6. **Confirmer** : lister les faits créés et rappeler que `/memory-promote` poussera la branche de proposition.
 
 ## Points d'attention
 
 - **Étage 1 uniquement** : on écrit dans la working copy, pas dans `main`. Rien n'est partagé
-  tant que `/memory-promote` n'a pas ouvert et fait merger une PR.
+  tant que `/memory-promote` n'a pas poussé et fait fusionner une branche.
 - **Pas de doublons** : avant de créer un fait, vérifier qu'un fichier ne couvre pas déjà le
   sujet (le mettre à jour plutôt que d'en créer un second).
 - **Pas de perso** : ne jamais créer de faits `type: user`/`feedback` via l'import.

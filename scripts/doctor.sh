@@ -18,25 +18,14 @@ command -v python3 >/dev/null 2>&1 \
   && ok "python3 ($(python3 --version 2>&1 | awk '{print $2}'))" \
   || ko "python3 manquant — indispensable (viewer + registre)"
 
-command -v gh >/dev/null 2>&1 \
-  && ok "gh (GitHub CLI)" \
-  || opt "gh absent — requis seulement pour /memory-promote et /memory-review"
-
-# WSL2 : ouverture du navigateur
-if grep -qi microsoft /proc/version 2>/dev/null; then
-  command -v wslview >/dev/null 2>&1 \
-    && ok "wslview (wslu) — ouverture navigateur WSL2" \
-    || opt "wslview absent — 'sudo apt install wslu' pour /memory-ui (sinon ouverture manuelle)"
-fi
-
-# Auth GitHub (best effort)
-if command -v ssh >/dev/null 2>&1 \
-   && ssh -T git@github.com -o StrictHostKeyChecking=accept-new 2>&1 | grep -qi 'successfully authenticated'; then
-  ok "GitHub SSH authentifié"
-elif command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-  ok "GitHub authentifié via gh"
+# Auth GitHub — vérif locale, NON interactive (aucun appel réseau, aucune passphrase demandée).
+# Le plugin est public (pas besoin d'auth) ; ceci ne concerne que le clone des VAULTS privés.
+if ls "$HOME"/.ssh/id_* >/dev/null 2>&1; then
+  opt "Clé SSH présente — ajoute-la à GitHub (et 'ssh-add' si passphrase) pour cloner les vaults privés"
+elif git config --get credential.helper >/dev/null 2>&1; then
+  opt "Credential helper git configuré (HTTPS+token) — ok pour les vaults privés"
 else
-  opt "Auth GitHub non détectée — fais 'gh auth login' (le plus simple) pour cloner les repos privés"
+  opt "Auth git non configurée — clé SSH ajoutée à GitHub, ou token HTTPS (voir INSTALL.md), pour les vaults privés"
 fi
 
 echo

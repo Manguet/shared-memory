@@ -22,6 +22,9 @@ fi
 
 OUT="/tmp/shared-memory-view-$SLUG.html"
 python3 "$HERE/build-viewer.py" "$VAULT" "$OUT" "$HERE/../assets/viewer-template.html" >/dev/null
-echo "Viewer généré : $OUT"
-echo "Vault         : $VAULT"
-sm_open "$OUT"
+URL="$(sm_fileurl "$OUT")"
+echo "Vault : $VAULT"
+printf 'Mémoire (clique pour ouvrir) : '
+sm_hyperlink "$URL" "$URL"
+# Tente aussi l'ouverture automatique si un ouvreur est dispo (bonus, silencieux sinon).
+sm_open "$OUT" 2>/dev/null || true

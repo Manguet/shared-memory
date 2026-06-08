@@ -25,7 +25,7 @@ par le vault, partagé avec l'équipe.
 - **Étage 1 — local** : working copy non commitée ; faits `type: user`/`feedback` (perso),
   brouillons. Jamais partagés (gitignore + non promus).
 - **Étage 2 — canonique** : branche `main` du vault, faits `type: project`/`reference`
-  validés par PR.
+  validés par revue de branche.
 
 ## Multi-vault
 

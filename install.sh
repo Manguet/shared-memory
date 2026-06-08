@@ -18,7 +18,6 @@ for bin in git python3; do
   command -v "$bin" >/dev/null 2>&1 || { echo "  X  $bin manquant (indispensable) — installe-le puis relance."; exit 1; }
 done
 echo "  OK git, python3"
-command -v gh >/dev/null 2>&1 || echo "  ~  gh absent (requis plus tard pour /memory-promote et /memory-review)"
 if grep -qi microsoft /proc/version 2>/dev/null; then
   command -v wslview >/dev/null 2>&1 || echo "  ~  wslview absent (sudo apt install wslu, pour /memory-ui)"
 fi
