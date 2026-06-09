@@ -3,7 +3,7 @@ name: memory-promote
 description: This skill should be used when the user asks to "promouvoir la mémoire", "partager mes mémoires", "proposer mes faits à l'équipe", "pousser la mémoire d'équipe", "promote memory", "/memory-promote", or at the end of a work session to propose new project facts to the shared vault. It collects new/changed project & reference memories, verifies them against the code, and pushes a proposal branch (git only) for a reviewer to merge.
 argument-hint: "[résumé]"
 allowed-tools: Bash, Read, Grep, Glob
-version: 0.1.0
+version: 0.2.0
 ---
 
 # memory-promote — Proposer ses mémoires au vault (branche git)
@@ -46,18 +46,22 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    périmés/contradictoires, et résumer à l'utilisateur ce qui est gardé, corrigé, écarté.
    C'est le cœur du skill — ne pas le sauter.
 
-5. **Créer la branche + commit + push** depuis le clone :
+5. **Tenir l'index hiérarchique à jour** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
+   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Vérifier que sa section figure dans le
+   sous-index `index/<domaine>.md` ; ajouter le domaine à la carte `MEMORY.md` s'il est nouveau.
+   **Ne jamais** lister chaque fait dans `MEMORY.md` — la carte ne contient que des domaines.
+   Si un sous-index approche **~150 lignes**, alerter et proposer un découpage (semi-auto).
+
+6. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
 
    ```bash
    git -C "<clone>" checkout -b promote/<slug>-<court-descriptif> origin/main
-   git -C "<clone>" add <fichiers-retenus> MEMORY.md
+   git -C "<clone>" add <domaine>/<fait>.md index/<domaine>.md MEMORY.md
    git -C "<clone>" commit -m "memory: <résumé>"
    git -C "<clone>" push -u origin HEAD
    ```
 
-   Mettre à jour `MEMORY.md` (l'index) si de nouveaux faits sont ajoutés.
-
-6. **Confirmer.** Donner le **nom de la branche** poussée et rappeler qu'un **référent** doit la
+7. **Confirmer.** Donner le **nom de la branche** poussée et rappeler qu'un **référent** doit la
    relire et la fusionner via `/memory-review` (jamais l'auteur lui-même) avant qu'elle devienne
    canonique.
 
@@ -65,8 +69,9 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
 
 - **Pas de fusion automatique.** Le skill pousse une branche, point. La fusion vers `main` se
   fait via `/memory-review`, par un référent.
-- **Index `MEMORY.md`** : point de conflit le plus probable — vérifier qu'il reste cohérent
-  (une ligne par fait).
+- **Index hiérarchique** : chaque promotion touche `index/<domaine>.md` (par domaine), ce qui
+  **réduit les conflits** ; la carte `MEMORY.md` ne change qu'à la **création d'un domaine**.
+  Garder la carte = liste de domaines (jamais un fait par ligne).
 - **Faits perso** (`user`/`feedback`) : restent en local, ne jamais les inclure dans la branche.
 
 ## Prochaine étape (guider l'utilisateur)
@@ -76,5 +81,6 @@ Donner le nom de la branche et dire mot pour mot : « Un coéquipier doit la val
 
 ## Ressources
 
+- **`${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`** — structure shardée, sous-index, carte, seuil.
 - **`references/governance.md`** — revue de branche, protection de `main`, vérification.
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh`** — helpers (`sm_slug`, `sm_vault_clone_for_slug`).

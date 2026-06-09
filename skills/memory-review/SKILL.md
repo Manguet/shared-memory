@@ -3,7 +3,7 @@ name: memory-review
 description: This skill should be used when the user asks to "valider la mémoire", "relire les propositions de mémoire", "fusionner une branche mémoire", "review memory", "valider une proposition", or "/memory-review". It reviews proposed memory branches in the vault with git (diff against main) and, once approved, merges them into main — using git only, no GitHub CLI.
 argument-hint: "[nom-de-branche]"
 allowed-tools: Bash, Read
-version: 0.1.0
+version: 0.2.0
 ---
 
 # memory-review — Valider les propositions de mémoire (git seul)
@@ -41,6 +41,12 @@ sans `gh`. La mémoire canonique ne change que par cette revue
    Lire chaque fait et, si besoin, le **confronter au code actuel** pour juger s'il est vrai
    et non contradictoire avec le canonique.
 
+   **Vérifier les domaines** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`) : si la
+   proposition crée un **nouveau domaine** (dossier `<domaine>/` + `index/<domaine>.md` + ligne
+   dans la carte), s'assurer qu'il ne **double pas** un domaine proche existant (`mailing` vs
+   `emails`) — sinon demander à l'auteur de **fusionner/renommer**. Valider aussi tout
+   **découpage** de domaine proposé (sous-domaines).
+
 4. **Décision** :
    - **Approuver et fusionner** :
 
@@ -58,6 +64,8 @@ sans `gh`. La mémoire canonique ne change que par cette revue
 ## Points d'attention
 
 - **Ne pas valider sa propre proposition** : le référent ≠ l'auteur.
+- **Cohérence des domaines** : la carte `MEMORY.md` ne liste que des domaines (jamais un fait par
+  ligne) ; chaque sous-index `index/<domaine>.md` reste sous ~150 lignes.
 - **`main` protégée** : seuls les référents poussent sur `main` (GitHub → Settings → Branches →
   *Restrict who can push to matching branches*). Les autres ne poussent que des `promote/*`.
 
@@ -68,6 +76,7 @@ au prochain démarrage de session ou via `/memory-setup` (qui fait un pull). »
 
 ## Ressources
 
+- **`${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`** — domaines, sous-index, carte, seuil.
 - **`${CLAUDE_PLUGIN_ROOT}/skills/memory-promote/references/governance.md`** — revue de branche,
   protection de `main`.
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh`** — localisation du vault.

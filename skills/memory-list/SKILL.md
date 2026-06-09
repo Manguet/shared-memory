@@ -3,7 +3,7 @@ name: memory-list
 description: This skill should be used when the user asks to "consulter la mémoire", "que sait-on sur X", "chercher dans la mémoire", "qu'y a-t-il en mémoire", "list memory", "search team memory", or "/memory-list". It reads and searches the project's shared memory vault and summarizes matching facts.
 argument-hint: "[terme-de-recherche]"
 allowed-tools: Bash, Read, Grep, Glob
-version: 0.1.0
+version: 0.2.0
 ---
 
 # memory-list — Consulter et chercher dans la mémoire d'équipe
@@ -22,14 +22,15 @@ visuel `/memory-ui`.
 
    Si rien n'est renvoyé, demander de lancer `/memory-setup` d'abord.
 
-2. **Sans terme de recherche** : lire `MEMORY.md` (l'index) du vault et le restituer de façon
-   structurée (par fait, avec le type).
+2. **Sans terme de recherche** : lire la carte `MEMORY.md` (les **domaines**), puis, pour le
+   détail d'un domaine, son sous-index `index/<domaine>.md`. Restituer par domaine → faits. Les
+   faits à la racine (« général ») figurent dans la section « Général » de la carte.
 
-3. **Avec un terme** : utiliser Grep sur le vault (`.md`) pour trouver les faits qui matchent
-   (nom, description, corps), puis lire/résumer les fichiers pertinents.
+3. **Avec un terme** : `Grep` **récursif** sur le vault (`.md`, sous-dossiers de domaines inclus)
+   pour trouver les faits qui matchent (nom, description, corps), puis lire/résumer les pertinents.
 
-4. **Restituer** chaque fait avec : son `name`, son `type` (`project`/`reference`/…), et un
-   résumé. Citer le fichier source.
+4. **Restituer** chaque fait avec : son `name`, son **domaine** (dossier parent), son `type`
+   (`project`/`reference`/…), et un résumé. Citer le fichier source (`<domaine>/<fait>.md`).
 
 ## Points d'attention
 
@@ -45,4 +46,5 @@ un fait manquant, `/memory-ui` pour la vue visuelle, `/memory-promote` pour part
 
 ## Ressources
 
+- **`${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`** — carte des domaines, sous-index, structure.
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh`** — `sm_slug`, `sm_vault_clone_for_slug`.
