@@ -281,30 +281,51 @@ function renderFilters(){
   });
 }
 
-/* ---------- sidebar nav ---------- */
+/* ---------- sidebar : arbre récursif sur f.path[], lazy-render ---------- */
+function buildTree(facts){
+  const root = { children: new Map(), facts: [], count: 0 };
+  facts.forEach(f => {
+    let node = root; root.count++;
+    (f.path || []).forEach(seg => {
+      if(!node.children.has(seg)) node.children.set(seg, { children: new Map(), facts: [], count: 0 });
+      node = node.children.get(seg); node.count++;
+    });
+    node.facts.push(f);
+  });
+  return root;
+}
+
+function navItem(f){
+  const b = document.createElement('button');
+  b.className = 'navitem' + (state.view==='fact' && state.factId===f.file ? ' active' : '');
+  b.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${COLOR[f.type] || 'var(--muted2)'};margin-right:8px;vertical-align:middle"></span>${esc(f.name)}`;
+  b.title = f.name + ' · ' + f.type;
+  b.onclick = () => { state.view = 'fact'; state.factId = f.file; $('q').value=''; state.query=''; update(); };
+  return b;
+}
+
+function navNode(node, label){
+  const g = document.createElement('details'); g.className = 'group'; g.open = false;
+  g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(label)}<span class="gcount">${node.count}</span></summary>`;
+  let filled = false;
+  g.addEventListener('toggle', () => {            // lazy : rendu des enfants à l'ouverture
+    if(g.open && !filled){
+      filled = true;
+      [...node.children.keys()].sort().forEach(seg => g.appendChild(navNode(node.children.get(seg), seg)));
+      node.facts.forEach(f => g.appendChild(navItem(f)));
+    }
+  });
+  return g;
+}
+
 function renderNav(){
   const nav = $('nav'); nav.innerHTML = '';
-  let idx = 0;
-  const vis = visible();                                   // déjà filtré par type
-  const all = [...new Set(vis.map(f => f.domain))].sort();
-  // « général » (faits non rangés / locaux) toujours en tête, le reste trié
-  const domains = all.includes('général') ? ['général', ...all.filter(d => d !== 'général')] : all;
-  domains.forEach(dom => {
-    const items = vis.filter(f => f.domain === dom);
-    if(!items.length) return;
-    const g = document.createElement('details'); g.className = 'group'; g.open = false;  // replié par défaut
-    g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(dom)}<span class="gcount">${items.length}</span></summary>`;
-    items.forEach(f => {
-      const b = document.createElement('button');
-      b.className = 'navitem' + (state.view==='fact' && state.factId===f.file ? ' active' : '');
-      b.style.animationDelay = (idx++ * 12) + 'ms';
-      b.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${COLOR[f.type] || 'var(--muted2)'};margin-right:8px;vertical-align:middle"></span>${esc(f.name)}`;
-      b.title = f.name + ' · ' + f.type;                   // pastille = type ; infobulle = nom + type
-      b.onclick = () => { state.view = 'fact'; state.factId = f.file; $('q').value=''; state.query=''; update(); };
-      g.appendChild(b);
-    });
-    nav.appendChild(g);
-  });
+  const root = buildTree(visible());
+  // « général » = faits à la racine (path vide), toujours en tête
+  if(root.facts.length){
+    nav.appendChild(navNode({ children: new Map(), facts: root.facts, count: root.facts.length }, 'général'));
+  }
+  [...root.children.keys()].sort().forEach(seg => nav.appendChild(navNode(root.children.get(seg), seg)));
 }
 
 /* ---------- main views ---------- */
