@@ -57,10 +57,10 @@ def collect_facts(vault):
             full = os.path.join(root, fn)
             rel = os.path.relpath(full, vault)
             parts = rel.split(os.sep)
-            if rel == "MEMORY.md":
+            if rel == "MEMORY.md":   # racine uniquement ; un sous/MEMORY.md devient un fait normal
                 _, index_body = parse_md(full)
                 continue
-            if parts[0] == "index":
+            if parts[0] == "index":  # sous-index niveau 1 (index/<domaine>.md) -> jamais un fait
                 continue
             domain = parts[0] if len(parts) > 1 else "général"
             fm, body = parse_md(full)
