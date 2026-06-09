@@ -136,6 +136,20 @@ class PathTest(unittest.TestCase):
         self.assertEqual(facts[0]["path"], [])
         self.assertEqual(facts[0]["domain"], "général")
 
+    def test_metadata_only_omits_body(self):
+        write(os.path.join(self.vault, "mailing", "audit.md"),
+              "---\nname: audit\nmetadata:\n  type: project\n---\nle corps")
+        facts, _ = bv.collect_facts(self.vault, include_body=False)
+        self.assertNotIn("body", facts[0])
+        self.assertEqual(facts[0]["name"], "audit")
+        self.assertEqual(facts[0]["path"], ["mailing"])
+
+    def test_default_includes_body(self):
+        write(os.path.join(self.vault, "mailing", "audit.md"),
+              "---\nname: audit\n---\nle corps")
+        facts, _ = bv.collect_facts(self.vault)
+        self.assertEqual(facts[0]["body"], "le corps")
+
 
 if __name__ == "__main__":
     unittest.main()

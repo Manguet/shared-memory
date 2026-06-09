@@ -40,7 +40,7 @@ def parse_md(path):
     return fm, body.strip()
 
 
-def collect_facts(vault):
+def collect_facts(vault, include_body=True):
     """Renvoie (facts, index_body) en parcourant récursivement le vault.
 
     - `MEMORY.md` à la racine -> index_body (la carte).
@@ -65,15 +65,17 @@ def collect_facts(vault):
             domain = parts[0] if len(parts) > 1 else "général"
             path = parts[:-1]   # segments du dossier (arbre N-niveaux) ; [] à la racine
             fm, body = parse_md(full)
-            facts.append({
+            fact = {
                 "file": rel,
                 "name": fm.get("name", fn[:-3]),
                 "description": fm.get("description", ""),
                 "type": fm.get("metadata.type") or fm.get("type", "project"),
                 "domain": domain,
                 "path": path,
-                "body": body,
-            })
+            }
+            if include_body:
+                fact["body"] = body
+            facts.append(fact)
     facts.sort(key=lambda f: (f["domain"], f["name"]))
     return facts, index_body
 
