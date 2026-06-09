@@ -41,22 +41,38 @@ def parse_md(path):
 
 
 def collect_facts(vault):
-    """Renvoie (facts, index_body) pour un vault PLAT (sera rendu récursif en Task A2)."""
+    """Renvoie (facts, index_body) en parcourant récursivement le vault.
+
+    - `MEMORY.md` à la racine -> index_body (la carte).
+    - tout `.md` sous `index/` -> ignoré (sous-index niveau 1).
+    - tout autre `.md` -> un fait ; `domain` = 1er segment du chemin relatif
+      s'il est dans un sous-dossier, sinon « général » (faits à la racine = mode mixte).
+    `file` = chemin relatif au vault (unique même entre domaines).
+    """
     facts, index_body = [], ""
-    for fn in sorted(os.listdir(vault)):
-        if not fn.endswith(".md"):
-            continue
-        fm, body = parse_md(os.path.join(vault, fn))
-        if fn == "MEMORY.md":
-            index_body = body
-            continue
-        facts.append({
-            "file": fn,
-            "name": fm.get("name", fn[:-3]),
-            "description": fm.get("description", ""),
-            "type": fm.get("metadata.type") or fm.get("type", "project"),
-            "body": body,
-        })
+    for root, _dirs, files in os.walk(vault):
+        for fn in sorted(files):
+            if not fn.endswith(".md"):
+                continue
+            full = os.path.join(root, fn)
+            rel = os.path.relpath(full, vault)
+            parts = rel.split(os.sep)
+            if rel == "MEMORY.md":
+                _, index_body = parse_md(full)
+                continue
+            if parts[0] == "index":
+                continue
+            domain = parts[0] if len(parts) > 1 else "général"
+            fm, body = parse_md(full)
+            facts.append({
+                "file": rel,
+                "name": fm.get("name", fn[:-3]),
+                "description": fm.get("description", ""),
+                "type": fm.get("metadata.type") or fm.get("type", "project"),
+                "domain": domain,
+                "body": body,
+            })
+    facts.sort(key=lambda f: (f["domain"], f["name"]))
     return facts, index_body
 
 
