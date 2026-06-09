@@ -346,12 +346,33 @@ function showFact(f){
 
 function viewResults(q){
   const r = matches(q);
-  if(!r.length) return `<div class="empty">Aucun fait ne correspond à « ${esc(q)} ».</div>`;
-  return `<div class="results">` + r.map(f => `
-    <button class="result" data-file="${esc(f.file)}">
-      <div class="rh">${badge(f.type)}<span class="rn">${hl(f.name,q)}</span></div>
-      <div class="rd">${f.description ? hl(f.description,q) : esc(f.file)}</div>
-    </button>`).join('') + `</div>`;
+  const head = `<div style="margin-bottom:10px"><button class="btn" id="srvSearch">chercher « ${esc(q)} » dans le contenu</button></div>`;
+  const list = !r.length
+    ? `<div class="empty">Aucun fait (nom/description) ne correspond à « ${esc(q)} ».</div>`
+    : `<div class="results">` + r.map(f => `
+        <button class="result" data-file="${esc(f.file)}">
+          <div class="rh">${badge(f.type)}<span class="rn">${hl(f.name,q)}</span></div>
+          <div class="rd">${f.description ? hl(f.description,q) : esc(f.file)}</div>
+        </button>`).join('') + `</div>`;
+  return head + list;
+}
+
+function runServerSearch(q){
+  const m = $('main');
+  fetch('/search?q=' + encodeURIComponent(q))
+    .then(r => r.json())
+    .then(res => {
+      const list = !res.length
+        ? `<div class="empty">Aucun fait dont le contenu contient « ${esc(q)} ».</div>`
+        : `<div class="results">` + res.map(f => `
+            <button class="result" data-file="${esc(f.file)}">
+              <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span></div>
+              <div class="rd">${esc((f.path||[]).join(' / ') || 'général')}</div>
+            </button>`).join('') + `</div>`;
+      m.innerHTML = `<div style="margin-bottom:10px;color:var(--muted2)">Contenu · « ${esc(q)} »</div>` + list;
+      bindResults();
+    })
+    .catch(() => { m.innerHTML = `<div class="empty">Recherche serveur indisponible.</div>`; });
 }
 
 function viewHome(){
@@ -486,8 +507,11 @@ function renderMain(){
   m.innerHTML = viewHome(); bindHome();
 }
 
-function bindResults(){ document.querySelectorAll('.result').forEach(b =>
-  b.onclick = () => { state.view='fact'; state.factId=b.dataset.file; $('q').value=''; state.query=''; update(); }); }
+function bindResults(){
+  const sb = $('srvSearch'); if(sb) sb.onclick = () => runServerSearch(state.query);
+  document.querySelectorAll('.result').forEach(b =>
+    b.onclick = () => { state.view='fact'; state.factId=b.dataset.file; $('q').value=''; state.query=''; update(); });
+}
 function bindHome(){ document.querySelectorAll('.stat').forEach(s =>
   s.onclick = () => { state.types = new Set([s.dataset.type]); update(); }); }
 function bindUsage(){ document.querySelectorAll('.usage .tl-step').forEach(el =>
