@@ -262,7 +262,7 @@ function hl(s, q){ if(!q) return esc(s); const i = s.toLowerCase().indexOf(q.toL
   if(i<0) return esc(s); return esc(s.slice(0,i))+'<mark>'+esc(s.slice(i,i+q.length))+'</mark>'+esc(s.slice(i+q.length)); }
 function visible(){ return DATA.facts.filter(f => state.types.has(f.type)); }
 function matches(q){ q = q.toLowerCase(); return visible().filter(f =>
-  (f.name+f.description+f.body).toLowerCase().includes(q)); }
+  (f.name + f.description).toLowerCase().includes(q)); }
 function factByFile(file){ return DATA.facts.find(f => f.file === file); }
 
 /* ---------- topbar / filters ---------- */
@@ -331,13 +331,17 @@ function renderNav(){
 /* ---------- main views ---------- */
 function badge(t){ return `<span class="badge" style="color:${COLOR[t]}">${t}</span>`; }
 
-function viewFact(f){
-  return `<div class="card detail">
+function showFact(f){
+  $('main').innerHTML = `<div class="card detail">
     <div class="fhead">${badge(f.type)}<span class="fname">${esc(f.name)}</span></div>
     ${f.description ? `<div class="fdesc">${esc(f.description)}</div>` : ''}
-    <div class="fbody">${md(f.body)}</div>
+    <div class="fbody" id="fbody">chargement…</div>
     <div class="ffile">${esc(f.file)}</div>
   </div>`;
+  fetch('/fact?f=' + encodeURIComponent(f.file))
+    .then(r => { if(!r.ok) throw new Error(r.status); return r.text(); })
+    .then(t => { const el = $('fbody'); if(el) el.innerHTML = md(t); })
+    .catch(() => { const el = $('fbody'); if(el) el.textContent = 'Erreur de chargement du fait.'; });
 }
 
 function viewResults(q){
@@ -473,7 +477,7 @@ function viewDraft(){
 function renderMain(){
   const m = $('main');
   if(state.query){ m.innerHTML = viewResults(state.query); bindResults(); return; }
-  if(state.view === 'fact'){ const f = factByFile(state.factId); m.innerHTML = f ? viewFact(f) : viewHome(); return; }
+  if(state.view === 'fact'){ const f = factByFile(state.factId); if(f){ showFact(f); } else { m.innerHTML = viewHome(); } return; }
   if(state.view === 'about'){ m.innerHTML = viewAbout(); return; }
   if(state.view === 'guide'){ m.innerHTML = viewGuide(); return; }
   if(state.view === 'usage'){ m.innerHTML = viewUsage(); bindUsage(); return; }
