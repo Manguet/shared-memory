@@ -73,5 +73,19 @@ class FactRouteTest(ServerTestBase):
         self.assertEqual(cm.exception.code, 404)
 
 
+class SearchRouteTest(ServerTestBase):
+    def test_search_matches_body(self):
+        status, payload = self.get("/search?q=corps%20secret")
+        self.assertEqual(status, 200)
+        res = json.loads(payload)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["name"], "audit")
+        self.assertNotIn("body", res[0])
+
+    def test_search_no_match_is_empty(self):
+        status, payload = self.get("/search?q=zzzznotfound")
+        self.assertEqual(json.loads(payload), [])
+
+
 if __name__ == "__main__":
     unittest.main()
