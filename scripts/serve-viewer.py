@@ -53,11 +53,11 @@ def make_handler(vault, template):
                 _, body = bv.parse_md(full)
                 self._send(200, body, "text/markdown; charset=utf-8")
             elif u.path == "/search":
-                q = (parse_qs(u.query).get("q") or [""])[0].lower()
+                q = (parse_qs(u.query).get("q") or [""])[0].strip().lower()
                 facts, _ = bv.collect_facts(vault, include_body=True)
                 res = []
                 for f in facts:
-                    hay = (f["name"] + f["description"] + f["body"]).lower()
+                    hay = " ".join((f["name"], f["description"], f["body"])).lower()
                     if q and q in hay:
                         res.append({k: f[k] for k in ("file", "name", "description", "type", "path")})
                 self._send(200, json.dumps(res, ensure_ascii=False),
