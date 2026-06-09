@@ -4,6 +4,7 @@ import os
 import tempfile
 import threading
 import unittest
+import urllib.error
 import urllib.request
 from http.server import HTTPServer
 
@@ -53,6 +54,23 @@ class IndexRouteTest(ServerTestBase):
         self.assertEqual(data["facts"][0]["name"], "audit")
         self.assertEqual(data["facts"][0]["path"], ["mailing"])
         self.assertNotIn("body", data["facts"][0])
+
+
+class FactRouteTest(ServerTestBase):
+    def test_fact_returns_body(self):
+        status, body = self.get("/fact?f=mailing/audit.md")
+        self.assertEqual(status, 200)
+        self.assertIn("le corps secret du fait", body)
+
+    def test_fact_rejects_traversal(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get("/fact?f=../../../../etc/passwd")
+        self.assertEqual(cm.exception.code, 404)
+
+    def test_fact_missing_is_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get("/fact?f=mailing/nope.md")
+        self.assertEqual(cm.exception.code, 404)
 
 
 if __name__ == "__main__":

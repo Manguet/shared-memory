@@ -41,6 +41,14 @@ def make_handler(vault, template):
                 html = open(template, encoding="utf-8").read().replace(
                     "/*__DATA__*/", json.dumps(data, ensure_ascii=False))
                 self._send(200, html, "text/html; charset=utf-8")
+            elif u.path == "/fact":
+                f = (parse_qs(u.query).get("f") or [""])[0]
+                full = os.path.realpath(os.path.join(vault, f))
+                inside = full == vault_real or full.startswith(vault_real + os.sep)
+                if not f or not full.endswith(".md") or not inside or not os.path.isfile(full):
+                    self._send(404, "not found"); return
+                _, body = bv.parse_md(full)
+                self._send(200, body, "text/markdown; charset=utf-8")
             else:
                 self._send(404, "not found")
 
