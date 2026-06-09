@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""Construit un viewer HTML autonome (lecture seule) à partir d'un vault mémoire.
+"""Lecture d'un vault mémoire : `parse_md` + `collect_facts`.
 
-Usage: build-viewer.py <vault-dir> <output-html> <template-html>
-Lit chaque fichier .md du vault (frontmatter + corps), injecte les données dans
-le template et écrit un fichier HTML autonome. Imprime le chemin de sortie.
+Module utilitaire (plus de CLI). Importé par `serve-viewer.py`, qui sert le viewer.
+`collect_facts(vault, include_body=True)` parcourt récursivement le vault et renvoie
+`(facts, index_body)` ; chaque fait porte file/name/description/type/domain/path (+ body).
 """
-import json
 import os
 import re
-import sys
 
 
 def parse_md(path):
@@ -78,19 +76,3 @@ def collect_facts(vault, include_body=True):
             facts.append(fact)
     facts.sort(key=lambda f: (f["domain"], f["name"]))
     return facts, index_body
-
-
-def main():
-    vault = sys.argv[1]
-    out = sys.argv[2]
-    tmpl = sys.argv[3]
-    facts, index_body = collect_facts(vault)
-    data = {"facts": facts, "index": index_body, "vault": vault, "count": len(facts)}
-    html = open(tmpl, encoding="utf-8").read()
-    html = html.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
-    open(out, "w", encoding="utf-8").write(html)
-    print(out)
-
-
-if __name__ == "__main__":
-    main()

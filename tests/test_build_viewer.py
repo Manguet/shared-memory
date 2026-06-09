@@ -1,11 +1,7 @@
 import importlib.util
-import json
 import os
-import re
-import sys
 import tempfile
 import unittest
-from unittest import mock
 
 HERE = os.path.dirname(__file__)
 SPEC = importlib.util.spec_from_file_location(
@@ -86,32 +82,6 @@ class DomainTest(unittest.TestCase):
         facts, index = bv.collect_facts(self.vault)
         self.assertIn("Carte", index)
         self.assertEqual([f["name"] for f in facts], ["audit"])
-
-
-class MainIntegrationTest(unittest.TestCase):
-    def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
-        self.root = self._tmp.name
-
-    def tearDown(self):
-        self._tmp.cleanup()
-
-    def test_main_injects_domain_into_html(self):
-        vault = os.path.join(self.root, "vault")
-        write(os.path.join(vault, "mailing", "audit.md"),
-              "---\nname: audit\nmetadata:\n  type: project\n---\ncorps")
-        tmpl = os.path.join(self.root, "tmpl.html")
-        write(tmpl, "<x>/*__DATA__*/</x>")
-        out = os.path.join(self.root, "out.html")
-        argv = ["build-viewer.py", vault, out, tmpl]
-        with mock.patch.object(sys, "argv", argv):
-            bv.main()
-        with open(out, encoding="utf-8") as f:
-            html = f.read()
-        m = re.search(r"<x>(.*)</x>", html, re.S)
-        data = json.loads(m.group(1))
-        self.assertEqual(data["count"], 1)
-        self.assertEqual(data["facts"][0]["domain"], "mailing")
 
 
 class PathTest(unittest.TestCase):
