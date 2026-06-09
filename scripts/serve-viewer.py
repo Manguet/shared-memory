@@ -43,7 +43,10 @@ def make_handler(vault, template):
                 self._send(200, html, "text/html; charset=utf-8")
             elif u.path == "/fact":
                 f = (parse_qs(u.query).get("f") or [""])[0]
-                full = os.path.realpath(os.path.join(vault, f))
+                try:
+                    full = os.path.realpath(os.path.join(vault, f))
+                except (ValueError, OSError):   # ex. null byte dans f -> 404 propre, pas 500
+                    self._send(404, "not found"); return
                 inside = full == vault_real or full.startswith(vault_real + os.sep)
                 if not f or not full.endswith(".md") or not inside or not os.path.isfile(full):
                     self._send(404, "not found"); return
