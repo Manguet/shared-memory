@@ -39,6 +39,7 @@ Plugin prêt. Pour l'activer, dans Claude Code, colle :
 
   /plugin marketplace add $DEST
   /plugin install shared-memory
+  /reload-plugins
 
 Puis, dans un projet déjà ouvert dans Claude Code :
 

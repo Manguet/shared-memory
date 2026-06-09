@@ -22,7 +22,7 @@ sans `gh`. La mémoire canonique ne change que par cette revue
 1. **Localiser le clone du vault** :
 
    ```bash
-   bash -c 'source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
+   bash -c 'source ${CLAUDE_PLUGIN_ROOT%/}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
    ```
 
 2. **Récupérer et lister les propositions** :

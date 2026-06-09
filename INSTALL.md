@@ -96,6 +96,7 @@ les 2 commandes à coller dans Claude Code :
 ```
 /plugin marketplace add ~/.shared-memory/plugin
 /plugin install shared-memory
+/reload-plugins
 ```
 
 > Installation **locale** : ajout par **chemin local**, rien n'est publié dans un catalogue public.

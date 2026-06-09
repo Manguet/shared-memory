@@ -23,7 +23,7 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
 1. **Localiser le vault.** Résoudre le clone du projet courant :
 
    ```bash
-   bash -c 'source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
+   bash -c 'source ${CLAUDE_PLUGIN_ROOT%/}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
    ```
 
    Si rien n'est renvoyé, demander à l'utilisateur de lancer `/memory-setup` d'abord.

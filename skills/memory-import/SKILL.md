@@ -17,7 +17,7 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
 1. **Localiser le vault** :
 
    ```bash
-   bash -c 'source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
+   bash -c 'source ${CLAUDE_PLUGIN_ROOT%/}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
    ```
 
    Si rien n'est renvoyé, demander de lancer `/memory-setup` d'abord.
@@ -38,7 +38,13 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
 5. **Mettre à jour `MEMORY.md`** (l'index) du vault : une ligne par nouveau fait
    (`- [Titre](fichier.md) — accroche`).
 
-6. **Confirmer** : lister les faits créés et rappeler que `/memory-promote` poussera la branche de proposition.
+6. **Régénérer le viewer** (pour qu'une vue déjà ouverte se mette à jour au rechargement de l'onglet) :
+
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT%/}/scripts/view.sh --build-only
+   ```
+
+7. **Confirmer** : lister les faits créés et rappeler que `/memory-promote` poussera la branche de proposition.
 
 ## Points d'attention
 

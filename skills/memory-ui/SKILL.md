@@ -13,30 +13,37 @@ serveur, aucune écriture** — Phase 1 de l'interface visuelle.
 
 ## Procédure
 
-1. **Demander confirmation avant d'ouvrir le navigateur.** Indiquer à l'utilisateur que la
-   commande va générer un HTML local et l'ouvrir dans son navigateur, et attendre son accord.
+1. **Demander confirmation avant de générer la vue.** Indiquer que la commande va générer un
+   fichier HTML local (lecture seule) et fournir un **lien cliquable** vers la mémoire, puis
+   attendre l'accord. La commande **n'ouvre rien automatiquement** ; elle donne un lien.
 
-2. **Générer et ouvrir le viewer** :
+2. **Générer la vue** :
 
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/view.sh
+   bash ${CLAUDE_PLUGIN_ROOT%/}/scripts/view.sh
    ```
 
-   Le script localise le vault du projet (via le registre, sinon via le symlink mémoire),
-   construit `/tmp/shared-memory-view-<slug>.html` et l'ouvre selon l'OS
-   (`wslview` sous WSL2, `open` sous macOS, `xdg-open` sous Linux).
+   Le script localise le vault, construit le HTML et affiche un lien `file://` cliquable.
+   Il **n'ouvre aucun navigateur** (volontaire : sous WSL2 l'ouverture auto casse le lien).
 
-3. **Indiquer le lien cliquable** affiché par le script : un simple clic ouvre la mémoire
-   dans le navigateur. Le lien est toujours affiché, même sans ouverture automatique.
+3. **Relayer uniquement le lien** de la ligne « LIEN À COMMUNIQUER », tel quel
+   (`file://wsl.localhost/…`), pour que l'utilisateur **clique**. **Ne jamais afficher de chemin
+   `/tmp/…`** (Windows ne peut pas l'ouvrir → `ERR_FILE_NOT_FOUND`).
+
+   **Interdiction absolue** : ne lancer AUCUNE commande d'ouverture toi-même (`xdg-open`,
+   `wslview`, `open`, `explorer.exe`, `cmd.exe`…). L'ouverture = le clic de l'utilisateur.
 
 ## Points d'attention
 
 - **Vault requis** : si le script renvoie « Vault introuvable », lancer `/memory-setup` d'abord.
-- **Lien cliquable toujours affiché** : un lien `file://` cliquable dans le terminal (chemin
-  converti pour Windows sous WSL2). Si `wslview` (paquet `wslu`) est présent, le navigateur
-  s'ouvre aussi tout seul ; sinon, il suffit de cliquer le lien.
-- **Lecture seule** : ce viewer n'écrit jamais dans le vault. L'édition/validation passe par
-  `/memory-promote` (Phase 1) ; un backend d'écriture viendra en Phase 2.
+- **Pas d'ouverture automatique** : le script ne fait que produire un lien `file://` cliquable
+  (chemin converti pour Windows sous WSL2). L'utilisateur **clique** le lien — c'est volontaire,
+  car toute ouverture auto sous WSL2 produit un lien cassé.
+- **Mise à jour** : après un `/memory-import`, le HTML est régénéré automatiquement →
+  **recharger l'onglet (F5)** montre les nouveaux faits. `/memory-ui` fait aussi un `git pull`
+  pour récupérer les faits arrivés via l'équipe.
+- **Lecture seule** : ce viewer n'écrit jamais dans le vault. L'ajout passe par `/memory-import`,
+  la proposition/validation par `/memory-promote` et `/memory-review`.
 
 ## Ressources
 

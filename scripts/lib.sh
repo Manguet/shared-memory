@@ -23,9 +23,12 @@ sm_memory_dir() {
 # ouvreur n'est dispo (renvoie 1) — l'appelant affiche alors un lien cliquable.
 sm_open() {
   local target="$1"
-  if command -v wslview >/dev/null 2>&1; then
-    wslview "$target"
-  elif command -v open >/dev/null 2>&1; then
+  if grep -qi microsoft /proc/version 2>/dev/null; then
+    # WSL2 : seul wslview ouvre le navigateur Windows ; xdg-open n'aide pas.
+    command -v wslview >/dev/null 2>&1 && { wslview "$target"; return; }
+    return 1
+  fi
+  if command -v open >/dev/null 2>&1; then
     open "$target"
   elif command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$target"

@@ -32,7 +32,7 @@ complet (deux étages, multi-vault, gouvernance par revue de branche git).
 3. **Lancer le script de setup** depuis la racine du projet courant :
 
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/setup-vault.sh "<vault-url>" "[clone-path]"
+   bash ${CLAUDE_PLUGIN_ROOT%/}/scripts/setup-vault.sh "<vault-url>" "[clone-path]"
    ```
 
    Le script : clone (ou pull) le vault, **sauvegarde** toute mémoire locale existante sans

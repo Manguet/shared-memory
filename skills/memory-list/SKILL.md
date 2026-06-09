@@ -17,7 +17,7 @@ visuel `/memory-ui`.
 1. **Localiser le vault** du projet courant :
 
    ```bash
-   bash -c 'source ${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
+   bash -c 'source ${CLAUDE_PLUGIN_ROOT%/}/scripts/lib.sh; sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")"'
    ```
 
    Si rien n'est renvoyé, demander de lancer `/memory-setup` d'abord.

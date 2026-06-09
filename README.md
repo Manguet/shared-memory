@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/Manguet/shared-memory/main/install.
 ```
 
 Le script vérifie les prérequis, clone le plugin dans `~/.shared-memory/plugin`, et affiche
-les 2 commandes `/plugin` à coller dans Claude Code (ajout par **chemin local**). Vérifier
+les commandes `/plugin` à coller dans Claude Code (ajout par **chemin local**, puis `/reload-plugins`). Vérifier
 seulement les prérequis : `bash scripts/doctor.sh`.
 
 ## Skills
@@ -78,11 +78,5 @@ shared-memory/
 ├── INSTALL.md
 └── docs/ARCHITECTURE.md
 ```
-
-## État
-
-Phases 1 & 2 implémentées (6 skills + viewer HTML avec guide/générateur de fait).
-Écriture et validation **conversationnelles** (skills), revue de branche en git — **pas de backend**.
-Reste à faire côté équipe : créer le vault, commit/push du plugin, protection de branche.
 
 Conception complète : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
