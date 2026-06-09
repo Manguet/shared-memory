@@ -285,18 +285,19 @@ function renderFilters(){
 function renderNav(){
   const nav = $('nav'); nav.innerHTML = '';
   let idx = 0;
-  TYPES.forEach(t => {
-    if(!state.types.has(t)) return;
-    const items = DATA.facts.filter(f => f.type === t);
+  const vis = visible();                                   // déjà filtré par type
+  const domains = [...new Set(vis.map(f => f.domain))].sort();
+  domains.forEach(dom => {
+    const items = vis.filter(f => f.domain === dom);
     if(!items.length) return;
     const g = document.createElement('details'); g.className = 'group'; g.open = true;
-    g.innerHTML = `<summary><span class="gdot" style="background:${COLOR[t]}"></span>${t}<span class="gcount">${items.length}</span></summary>`;
+    g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(dom)}<span class="gcount">${items.length}</span></summary>`;
     items.forEach(f => {
       const b = document.createElement('button');
       b.className = 'navitem' + (state.view==='fact' && state.factId===f.file ? ' active' : '');
       b.style.animationDelay = (idx++ * 12) + 'ms';
       b.textContent = f.name;
-      b.title = f.name;
+      b.title = f.name + ' · ' + f.type;                   // le type passe en infobulle
       b.onclick = () => { state.view = 'fact'; state.factId = f.file; $('q').value=''; state.query=''; update(); };
       g.appendChild(b);
     });
