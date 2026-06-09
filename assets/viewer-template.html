@@ -187,6 +187,21 @@
     background: rgba(210,162,76,.08); border-radius: 0 6px 6px 0; color: var(--muted2); font-size: 12px; }
   @media (max-width: 820px) { .usage { grid-template-columns: 1fr; } .usage-detail { position: static; } }
 
+  /* à propos */
+  .about { max-width: 780px; }
+  .about-lead { color: var(--text); font-size: 13.5px; line-height: 1.7; margin: 0 0 22px; }
+  .about-lead b { color: var(--coral); }
+  .concepts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+  .concept { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 15px 17px; }
+  .concept .ct { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .concept .ct .ci { color: var(--coral); font-weight: 700; width: 14px; text-align: center; }
+  .concept p { color: var(--muted2); font-size: 12.5px; line-height: 1.6; margin: 0; }
+  .concept p b { color: var(--text); }
+  .about-diagram { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .about-diagram pre { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: pre; overflow-x: auto; }
+  .about-diagram .v { color: var(--coral); }
+  @media (max-width: 820px) { .concepts { grid-template-columns: 1fr; } }
+
   /* draft */
   .form { display: grid; gap: 10px; max-width: 640px; margin-bottom: 16px; }
   .form input, .form select, .form textarea {
@@ -219,6 +234,7 @@
       <div class="filters" id="filters"></div>
       <nav id="nav"></nav>
       <div class="tools">
+        <button class="toolbtn" data-view="about"><span class="k">i</span>à propos</button>
         <button class="toolbtn" data-view="home"><span class="k">~</span>vue d'ensemble</button>
         <button class="toolbtn" data-view="draft"><span class="k">+</span>rédiger un fait</button>
         <button class="toolbtn" data-view="guide"><span class="k">?</span>guide des commandes</button>
@@ -321,6 +337,34 @@ function viewHome(){
     <div class="hint">Tape <span class="k">/</span> pour chercher · clique un fait dans la colonne de gauche · <span class="k">+</span> rédiger un fait · <span class="k">?</span> guide</div>`;
 }
 
+function viewAbout(){
+  const concepts = [
+    {i:"▌", t:"L'outil", d:"Un plugin pour Claude Code. Il branche la mémoire de Claude sur un espace partagé, et fournit cette interface pour la consulter."},
+    {i:"▢", t:"Le vault", d:"Le « coffre » où vit la mémoire : un dépôt git <b>privé</b>, <b>un par projet</b>. Toute l'équipe se branche sur le même vault → tous les Claude partagent le même savoir."},
+    {i:"·", t:"Un fait", d:"Une connaissance courte et durable (règle, convention, décision), rangée comme une fiche. Les faits <b>project</b> / <b>reference</b> sont partagés ; tes notes perso restent chez toi."},
+    {i:"◆", t:"La confiance", d:"Un nouveau fait ne devient officiel qu'après <b>validation</b> par un coéquipier. La mémoire partagée reste fiable, même avec beaucoup de contributeurs."},
+  ];
+  const cards = concepts.map(c => `<div class="concept">
+    <div class="ct"><span class="ci">${c.i}</span>${esc(c.t)}</div><p>${c.d}</p></div>`).join('');
+  const diagram = `   toi          coéquipier      coéquipière
+   ▌Claude      ▌Claude         ▌Claude
+     │              │              │
+     └──────────────┼──────────────┘
+                    │
+          <span class="v">┌──────────────────────┐
+          │   VAULT — le coffre  │
+          │   les faits partagés │
+          └──────────────────────┘</span>
+       un vault = un projet · privé à l'équipe`;
+  return `<h3 class="view-h">À propos — la mémoire d'équipe</h3>
+    <p class="view-p">Ce que fait cet outil, en clair.</p>
+    <div class="about">
+      <p class="about-lead"><b>shared-memory</b> donne à Claude une <b>mémoire partagée</b> sur ton projet. Normalement, ce que tu apprends à Claude reste privé à ta machine ; ici, c'est mis en commun avec toute l'équipe — chacun profite de ce que les autres ont enregistré.</p>
+      <div class="concepts">${cards}</div>
+      <div class="about-diagram"><pre>${diagram}</pre></div>
+    </div>`;
+}
+
 function viewGuide(){
   const rows = [
     ['/memory-setup &lt;url&gt;', 'Brancher le vault (une fois par projet)'],
@@ -406,6 +450,7 @@ function renderMain(){
   const m = $('main');
   if(state.query){ m.innerHTML = viewResults(state.query); bindResults(); return; }
   if(state.view === 'fact'){ const f = factByFile(state.factId); m.innerHTML = f ? viewFact(f) : viewHome(); return; }
+  if(state.view === 'about'){ m.innerHTML = viewAbout(); return; }
   if(state.view === 'guide'){ m.innerHTML = viewGuide(); return; }
   if(state.view === 'usage'){ m.innerHTML = viewUsage(); bindUsage(); return; }
   if(state.view === 'index'){ m.innerHTML = viewIndex(); return; }
