@@ -40,11 +40,8 @@ def parse_md(path):
     return fm, body.strip()
 
 
-def main():
-    vault = sys.argv[1]
-    out = sys.argv[2]
-    tmpl = sys.argv[3]
-
+def collect_facts(vault):
+    """Renvoie (facts, index_body) pour un vault PLAT (sera rendu récursif en Task A2)."""
     facts, index_body = [], ""
     for fn in sorted(os.listdir(vault)):
         if not fn.endswith(".md"):
@@ -57,11 +54,17 @@ def main():
             "file": fn,
             "name": fm.get("name", fn[:-3]),
             "description": fm.get("description", ""),
-            # `metadata:\n  type: x` -> clé plate `metadata.type` ; fallback `type` à plat
             "type": fm.get("metadata.type") or fm.get("type", "project"),
             "body": body,
         })
+    return facts, index_body
 
+
+def main():
+    vault = sys.argv[1]
+    out = sys.argv[2]
+    tmpl = sys.argv[3]
+    facts, index_body = collect_facts(vault)
     data = {"facts": facts, "index": index_body, "vault": vault, "count": len(facts)}
     html = open(tmpl, encoding="utf-8").read()
     html = html.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
