@@ -286,11 +286,13 @@ function renderNav(){
   const nav = $('nav'); nav.innerHTML = '';
   let idx = 0;
   const vis = visible();                                   // déjà filtré par type
-  const domains = [...new Set(vis.map(f => f.domain))].sort();
+  const all = [...new Set(vis.map(f => f.domain))].sort();
+  // « général » (faits non rangés / locaux) toujours en tête, le reste trié
+  const domains = all.includes('général') ? ['général', ...all.filter(d => d !== 'général')] : all;
   domains.forEach(dom => {
     const items = vis.filter(f => f.domain === dom);
     if(!items.length) return;
-    const g = document.createElement('details'); g.className = 'group'; g.open = true;
+    const g = document.createElement('details'); g.className = 'group'; g.open = false;  // replié par défaut
     g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(dom)}<span class="gcount">${items.length}</span></summary>`;
     items.forEach(f => {
       const b = document.createElement('button');
