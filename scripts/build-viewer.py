@@ -63,6 +63,7 @@ def collect_facts(vault):
             if parts[0] == "index":  # sous-index niveau 1 (index/<domaine>.md) -> jamais un fait
                 continue
             domain = parts[0] if len(parts) > 1 else "général"
+            path = parts[:-1]   # segments du dossier (arbre N-niveaux) ; [] à la racine
             fm, body = parse_md(full)
             facts.append({
                 "file": rel,
@@ -70,6 +71,7 @@ def collect_facts(vault):
                 "description": fm.get("description", ""),
                 "type": fm.get("metadata.type") or fm.get("type", "project"),
                 "domain": domain,
+                "path": path,
                 "body": body,
             })
     facts.sort(key=lambda f: (f["domain"], f["name"]))

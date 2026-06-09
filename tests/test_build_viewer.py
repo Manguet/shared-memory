@@ -114,5 +114,28 @@ class MainIntegrationTest(unittest.TestCase):
         self.assertEqual(data["facts"][0]["domain"], "mailing")
 
 
+class PathTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_path_is_folder_segments(self):
+        write(os.path.join(self.vault, "mailing", "transactionnel", "relances.md"),
+              "---\nname: relances\nmetadata:\n  type: project\n---\nx")
+        facts, _ = bv.collect_facts(self.vault)
+        f = facts[0]
+        self.assertEqual(f["path"], ["mailing", "transactionnel"])
+        self.assertEqual(f["domain"], "mailing")
+
+    def test_root_fact_path_empty(self):
+        write(os.path.join(self.vault, "note.md"), "---\nname: note\n---\nx")
+        facts, _ = bv.collect_facts(self.vault)
+        self.assertEqual(facts[0]["path"], [])
+        self.assertEqual(facts[0]["domain"], "général")
+
+
 if __name__ == "__main__":
     unittest.main()
