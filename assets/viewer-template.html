@@ -296,8 +296,8 @@ function renderNav(){
       const b = document.createElement('button');
       b.className = 'navitem' + (state.view==='fact' && state.factId===f.file ? ' active' : '');
       b.style.animationDelay = (idx++ * 12) + 'ms';
-      b.textContent = f.name;
-      b.title = f.name + ' · ' + f.type;                   // le type passe en infobulle
+      b.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${COLOR[f.type] || 'var(--muted2)'};margin-right:8px;vertical-align:middle"></span>${esc(f.name)}`;
+      b.title = f.name + ' · ' + f.type;                   // pastille = type ; infobulle = nom + type
       b.onclick = () => { state.view = 'fact'; state.factId = f.file; $('q').value=''; state.query=''; update(); };
       g.appendChild(b);
     });
