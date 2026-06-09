@@ -30,17 +30,25 @@ if [ "$BUILD_ONLY" = 0 ] && [ -d "$VAULT/.git" ]; then
   git -C "$VAULT" pull --ff-only --quiet 2>/dev/null || true
 fi
 
-OUT="/tmp/shared-memory-view-$SLUG.html"
-python3 "$HERE/build-viewer.py" "$VAULT" "$OUT" "$HERE/../assets/viewer-template.html" >/dev/null
+TMPL="$HERE/../assets/viewer-template.html"
+STATE="${TMPDIR:-/tmp}/shared-memory-serve-$SLUG.port"
 
-# Mode régénération silencieuse (appelé après une mutation pour rafraîchir une vue ouverte).
+# Le serveur lit le vault à chaque requête : rien à « régénérer », recharger l'onglet suffit.
 if [ "$BUILD_ONLY" = 1 ]; then
-  echo "Viewer régénéré : $OUT"
+  echo "Viewer servi : recharge l'onglet (F5) pour voir les changements."
   exit 0
 fi
 
-URL="$(sm_fileurl "$OUT")"
+alive() { [ -f "$STATE" ] && kill -0 "$(cut -d: -f1 "$STATE" 2>/dev/null)" 2>/dev/null; }
+
+# Réutilise un serveur déjà lancé pour ce vault, sinon en démarre un (port libre choisi par l'OS).
+if ! alive; then
+  PORT="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')"
+  nohup python3 "$HERE/serve-viewer.py" "$VAULT" "$TMPL" "$PORT" >/dev/null 2>&1 &
+  echo "$!:$PORT" > "$STATE"
+  sleep 1
+fi
+PORT="$(cut -d: -f2 "$STATE")"
+
 echo "Vault : $VAULT"
-printf 'LIEN À COMMUNIQUER (clique pour ouvrir) : '
-sm_hyperlink "$URL" "$URL"
-# Aucune ouverture automatique : sous WSL2 elle produit des liens cassés. L'utilisateur clique.
+echo "LIEN À COMMUNIQUER (clique pour ouvrir) : http://127.0.0.1:$PORT/"
