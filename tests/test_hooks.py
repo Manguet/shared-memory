@@ -114,5 +114,18 @@ class HookScriptTest(unittest.TestCase):
             self.assertEqual(out, "")
 
 
+class PluginHooksTest(unittest.TestCase):
+    def test_plugin_declares_session_hooks(self):
+        cfg = json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))
+        hooks = cfg.get("hooks", {})
+        start = json.dumps(hooks.get("SessionStart"))
+        end = json.dumps(hooks.get("SessionEnd"))
+        self.assertIn("hook-memory.sh", start)
+        self.assertIn("start", start)
+        self.assertIn("hook-memory.sh", end)
+        self.assertIn("end", end)
+        self.assertIn("CLAUDE_PLUGIN_ROOT", start)
+
+
 if __name__ == "__main__":
     unittest.main()

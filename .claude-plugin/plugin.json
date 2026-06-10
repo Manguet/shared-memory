@@ -5,5 +5,13 @@
   "author": {
     "name": "Benjamin Manguet",
     "email": "benjamin.manguet@gmail.com"
+  },
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-memory.sh\" start" } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-memory.sh\" end" } ] }
+    ]
   }
 }
