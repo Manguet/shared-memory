@@ -59,6 +59,21 @@ profondeur**, elle est émergente (1…N).
 C'est **semi-automatique** : le skill détecte et propose, l'humain valide. La profondeur ne se crée
 que quand un index parent déborde (cf. capacité : 2 niveaux ≈ 22 500 faits, 3 ≈ 3,4 M).
 
+### Moteur du redécoupage : `reshard.py`
+
+Le redécoupage est porté par **`scripts/reshard.py`** (invariant : *aucun dossier ne dépasse
+~150 faits directs ni ~150 sous-dossiers*). Il **restructure** les faits sur disque (déplacement
+en sous-domaines `part-xx` seulement là où le seuil est franchi, donc **idempotent** et
+sans toucher un sous-arbre déjà conforme) puis **régénère tout `index/**` + `MEMORY.md`** au format
+compact. Les skills l'appellent au lieu d'écrire l'index à la main :
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<vault>" [--max-entries 150]
+```
+
+Les sous-domaines créés portent des labels mécaniques (`part-01`…) ; **un humain peut les renommer**
+en libellés signifiants ensuite (reshard ne re-brasse pas un sous-arbre resté sous le seuil).
+
 ## Format d'une ligne de sous-index
 
 Une ligne par fait, dans `index/<domaine>.md` :
