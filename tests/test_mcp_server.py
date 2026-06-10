@@ -82,5 +82,16 @@ class ContextTest(unittest.TestCase):
             self.assertTrue(all("body" not in r for r in out["results"]))
 
 
+class McpJsonTest(unittest.TestCase):
+    def test_mcp_json_declares_server_with_plugin_root(self):
+        path = os.path.join(HERE, "..", ".mcp.json")
+        with open(path, encoding="utf-8") as f:
+            cfg = json.load(f)
+        srv = cfg["mcpServers"]["shared-memory"]
+        self.assertEqual(srv["command"], "python3")
+        self.assertTrue(any("${CLAUDE_PLUGIN_ROOT}" in a and a.endswith("mcp-server.py")
+                            for a in srv["args"]))
+
+
 if __name__ == "__main__":
     unittest.main()
