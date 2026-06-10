@@ -182,5 +182,24 @@ class UpdateTest(ServerTestBase):
         self.assertEqual(cm.exception.code, 404)
 
 
+class DeleteTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/"); return _token_of(html)
+
+    def test_delete_removes_fact(self):
+        write_req(self.port, "DELETE", "/api/fact?f=mailing/audit.md", token=self._token())
+        self.assertFalse(os.path.isfile(os.path.join(self.vault, "mailing", "audit.md")))
+
+    def test_delete_missing_is_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "DELETE", "/api/fact?f=mailing/nope.md", token=self._token())
+        self.assertEqual(cm.exception.code, 404)
+
+    def test_delete_traversal_is_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "DELETE", "/api/fact?f=../../../etc/passwd", token=self._token())
+        self.assertEqual(cm.exception.code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()

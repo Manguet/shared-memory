@@ -110,6 +110,15 @@ def update_fact(vault, file, data):
     return _metadata(vault)
 
 
+def delete_fact(vault, file):
+    full = _safe_path(vault, file)
+    if not os.path.isfile(full):
+        raise ApiError(404, "fait introuvable")
+    os.remove(full)
+    reshard.reshard(vault)
+    return _metadata(vault)
+
+
 def make_handler(vault, template):
     vault_real = os.path.realpath(vault)
     token = secrets.token_hex(16)
@@ -189,6 +198,20 @@ def make_handler(vault, template):
                 if u.path == "/api/fact":
                     f = (parse_qs(u.query).get("f") or [""])[0]
                     self._ok(update_fact(vault, f, self._json_body()))
+                else:
+                    self._send(404, "not found")
+            except ApiError as e:
+                self._send(e.status, e.message)
+            except (ValueError, OSError) as e:
+                self._send(400, "erreur: %s" % e)
+
+        def do_DELETE(self):
+            u = urlparse(self.path)
+            try:
+                self._require_token()
+                if u.path == "/api/fact":
+                    f = (parse_qs(u.query).get("f") or [""])[0]
+                    self._ok(delete_fact(vault, f))
                 else:
                     self._send(404, "not found")
             except ApiError as e:
