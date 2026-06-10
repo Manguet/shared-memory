@@ -136,7 +136,8 @@ claude --plugin-dir /var/www/shared-memory
 
 - **« Vault introuvable » à `/memory-ui`** → lancer `/memory-setup` d'abord.
 - **Le navigateur ne s'ouvre pas tout seul (WSL2)** → cliquer le lien `http://localhost:…` affiché
-  par `/memory-ui` (le viewer est servi par un petit serveur local en lecture seule).
+  par `/memory-ui` (le viewer est servi par un petit serveur local ; tu peux y lire **et gérer**
+  les faits — créer/éditer/supprimer — en brouillon local, à partager ensuite via `/memory-promote`).
 - **`search_memory` indique « recherche sémantique inactive » (repli grep)** → `fastembed` n'est pas
   installé ; lancer `/memory-doctor`, qui propose `pip install fastembed`.
 - **`git clone` du vault refusé** → accès non accordé au repo privé, ou auth git absente

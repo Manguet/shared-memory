@@ -11,8 +11,8 @@ application séparée.
 
 Mémoire native = fichiers `.md` locaux → symlink vers un **vault git** géré par le plugin.
 Mémoire **shardée par domaine** (carte `MEMORY.md` + sous-index compacts), **recherche sémantique**
-optionnelle (outil MCP `search_memory`, repli grep), **viewer web local** (lecture seule), et
-**gouvernance par revue de branche git**.
+optionnelle (outil MCP `search_memory`, repli grep), **viewer web local** (lecture + **CRUD local**
+des faits, étage 1), et **gouvernance par revue de branche git**.
 
 ## Distinction essentielle
 
@@ -45,7 +45,7 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 | `/memory-import` | normaliser un doc brut en faits mémoire (working copy) |
 | `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, pousse une branche de proposition |
 | `/memory-review` | relire et fusionner les branches de proposition (git seul) |
-| `/memory-ui` | ouvre un viewer web local (serveur lecture seule) du vault dans le navigateur |
+| `/memory-ui` | ouvre un viewer web local du vault (lecture + **CRUD local** des faits : créer/éditer/supprimer/déplacer, renommer un domaine — écriture en brouillon local, partage via `/memory-promote`) |
 | `/memory-doctor` | diagnostiquer la recherche mémoire (`search_memory`) et proposer les installs (fastembed) |
 
 ## Recherche & passage à l'échelle

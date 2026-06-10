@@ -209,7 +209,7 @@ Claude Code ne **dessine pas** d'UI custom (c'est un terminal). Mais une command
 **lancer une interface externe** : ouvrir une page dans le navigateur déjà présent.
 Pattern : l'IA **demande confirmation** avant d'ouvrir l'URL.
 
-**Mise en œuvre actuelle : un mini-serveur local en lecture seule.** Le viewer n'est plus un
+**Mise en œuvre actuelle : un mini-serveur local.** Le viewer n'est plus un
 fichier HTML statique (le mode statique a été **retiré**) mais un petit serveur `serve-viewer.py`
 (`http.server`, bind `127.0.0.1`) lancé par `/memory-ui` / `view.sh` :
 - l'index envoyé au navigateur ne contient que les **métadonnées** des faits (léger) ; le **corps**
@@ -218,15 +218,19 @@ fichier HTML statique (le mode statique a été **retiré**) mais un petit serve
   instantané côté client + plein-texte serveur `GET /search`) ;
 - **sécurité** : localhost uniquement, validation anti-traversal (`realpath` dans le vault), ne
   sert que des `.md` ;
-- **guidage intégré** : encart commandes, **générateur de fait** (snippet → `/memory-import`),
-  guide d'utilisation ; chaque skill termine par la **prochaine commande**.
+- **guidage & édition intégrés** : formulaire de création/édition de faits, guide d'utilisation ;
+  chaque skill termine par la **prochaine commande**.
 
 `http://localhost:PORT` est plus fiable que `file://wsl.localhost` sous WSL2.
 
-**Toujours pas d'UI d'écriture.** Le serveur est **lecture seule** : l'écriture et la validation
-restent **conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) via
-git (revue de branche). Un chat-agent embarqué reste écarté — le « chat connecté à Claude », c'est
-Claude Code lui-même.
+**Écriture LOCALE (étage 1), jamais vers le canonique.** Le viewer expose un **CRUD local** —
+créer / éditer / supprimer / déplacer un fait, renommer un domaine — via des routes `/api/*`
+(`POST`/`PUT`/`DELETE`) qui écrivent **uniquement dans le clone** (working copy, brouillons), puis
+appellent `reshard`. Sécurité : bind `127.0.0.1`, **jeton same-origin** (`X-SM-Token`) exigé sur
+les écritures, anti-traversal. **Rien n'est poussé** : le canonique passe toujours par
+`/memory-promote` → `/memory-review` (revue de branche). Donc **aucun git dans l'UI, aucune
+écriture vers le canonique** — la barrière de gouvernance tient. Un chat-agent embarqué reste
+écarté — le « chat connecté à Claude », c'est Claude Code lui-même.
 
 Ouverture du navigateur cross-platform : `open` (Mac) · `wslview` / `cmd.exe start` (WSL2)
 · `xdg-open` (Linux). Un serveur localhost lancé dans WSL2 est joignable depuis le
@@ -280,10 +284,11 @@ navigateur Windows (forwarding automatique).
 - **Distribution du plugin = repo public**, install **locale** par script `install.sh`
   (clone + activation par chemin local). `marketplace.json` ≠ catalogue public (aucun
   listing). Vaults restent privés.
-- Interface : **mini-serveur local lecture seule** (`serve-viewer.py`, `http://localhost`) — le
-  mode HTML statique `file://` a été **retiré** ; guidage intégré (commandes, générateur de fait,
-  guide d'utilisation). Pas d'UI d'**écriture** ni de chat embarqué — écriture/validation = skills
-  (revue de branche git). Voir §8 et §12.
+- Interface : **mini-serveur local** (`serve-viewer.py`, `http://localhost`) — le mode HTML statique
+  `file://` a été **retiré**. **CRUD local des faits** dans l'UI (créer/éditer/supprimer/déplacer,
+  renommer un domaine) écrivant **uniquement dans le clone** (étage 1, jeton same-origin) ; **aucune
+  écriture vers le canonique, aucun git dans l'UI** — la promotion reste `/memory-promote` →
+  `/memory-review`. Pas de chat embarqué. Voir §8 et §12.
 - **Sharding par domaine** (carte + sous-index compacts) + **`reshard.py`** (redécoupage récursif) ;
   **recherche sémantique `search_memory`** (serveur MCP, fastembed optionnel, repli grep) +
   **`/memory-doctor`** pour les prérequis. Voir §12.
