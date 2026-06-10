@@ -255,6 +255,7 @@
     <div class="actions">
       <span class="count" id="count"></span>
     </div>
+      <span class="count" style="color:var(--faint)" title="Les écritures restent locales jusqu'à /memory-promote">⬤ local</span>
   </header>
   <div class="layout">
     <aside class="sidebar">
@@ -278,6 +279,15 @@ const TYPES = ["project", "reference", "feedback", "user"];
 const COLOR = { project: "var(--project)", reference: "var(--reference)", feedback: "var(--feedback)", user: "var(--user)" };
 const state = { view: "home", factId: null, query: "", types: new Set(TYPES), usageStep: 0 };
 const $ = id => document.getElementById(id);
+const TOKEN = DATA.token || '';
+async function api(method, path, body){
+  const r = await fetch(path, { method,
+    headers: Object.assign({'X-SM-Token': TOKEN}, body ? {'Content-Type':'application/json'} : {}),
+    body: body ? JSON.stringify(body) : undefined });
+  if(!r.ok) throw new Error((await r.text()) || r.status);
+  return r.json();
+}
+function applyMeta(meta){ DATA.facts = meta.facts; DATA.index = meta.index; DATA.count = meta.count; rebuildNav(); }
 
 function esc(s){ return (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function md(s){ return esc(s)
@@ -363,15 +373,57 @@ function badge(t){ return `<span class="badge" style="color:${COLOR[t]}">${t}</s
 
 function showFact(f){
   $('main').innerHTML = `<div class="card detail">
-    <div class="fhead">${badge(f.type)}<span class="fname">${esc(f.name)}</span></div>
+    <div class="fhead">${badge(f.type)}<span class="fname">${esc(f.name)}</span>
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" id="f-edit">éditer</button>
+        <button class="btn" id="f-del">supprimer</button></span></div>
     ${f.description ? `<div class="fdesc">${esc(f.description)}</div>` : ''}
     <div class="fbody" id="fbody">chargement…</div>
     <div class="ffile">${esc(f.file)}</div>
+    <div id="f-confirm"></div>
   </div>`;
   fetch('/fact?f=' + encodeURIComponent(f.file))
     .then(r => { if(!r.ok) throw new Error(r.status); return r.text(); })
-    .then(t => { const el = $('fbody'); if(el) el.innerHTML = md(t); })
+    .then(t => { const el = $('fbody'); if(el){ el.dataset.raw = t; el.innerHTML = md(t); } })
     .catch(() => { const el = $('fbody'); if(el) el.textContent = 'Erreur de chargement du fait.'; });
+  $('f-edit').onclick = () => editFact(f);
+  $('f-del').onclick = () => {
+    $('f-confirm').innerHTML = `<div class="ud-note">Supprimer « ${esc(f.name)} » ? (récupérable via git tant que non poussé)
+      <button class="btn" id="f-del-yes" style="margin-left:10px">confirmer</button>
+      <button class="btn" id="f-del-no">annuler</button></div>`;
+    $('f-del-no').onclick = () => $('f-confirm').innerHTML = '';
+    $('f-del-yes').onclick = async () => {
+      try { const meta = await api('DELETE', '/api/fact?f=' + encodeURIComponent(f.file)); applyMeta(meta);
+        state.view='home'; state.factId=null; update(); }
+      catch(e){ $('f-confirm').innerHTML = `<div class="ud-note" style="border-color:var(--feedback)">${esc(String(e.message||e))}</div>`; }
+    };
+  };
+}
+function editFact(f){
+  const raw = ($('fbody') && $('fbody').dataset.raw) || '';
+  const body = raw.replace(/^---[\s\S]*?---\n?/, '');
+  $('main').innerHTML = `<div class="card detail"><h3 class="view-h">Éditer un fait</h3>
+    <div class="form">
+      <label>nom (slug)</label><input id="e-name" value="${esc(f.name)}">
+      <label>description</label><input id="e-desc" value="${esc(f.description||'')}">
+      <label>type</label><select id="e-type">${['project','reference','user','feedback'].map(t=>`<option value="${t}"${t===f.type?' selected':''}>${t}</option>`).join('')}</select>
+      <label>domaine</label><input id="e-domain" list="e-domains" value="${esc((f.path||[])[0]||'')}"><datalist id="e-domains">${domainOptions((f.path||[])[0]||'')}</datalist>
+      <label>contenu</label><textarea id="e-body">${esc(body.trim())}</textarea>
+    </div>
+    <div style="margin-top:10px"><button class="btn" id="e-save">enregistrer</button>
+      <button class="btn" id="e-cancel">annuler</button><span class="copied" id="e-msg" style="display:none"></span></div></div>`;
+  $('e-cancel').onclick = () => { state.view='fact'; update(); };
+  $('e-save').onclick = async () => {
+    try {
+      const meta = await api('PUT', '/api/fact?f=' + encodeURIComponent(f.file),
+        { name:$('e-name').value.trim(), description:$('e-desc').value.trim(),
+          type:$('e-type').value, body:$('e-body').value, domain:$('e-domain').value.trim() });
+      applyMeta(meta);
+      const dom = $('e-domain').value.trim(), ty = $('e-type').value, nm = $('e-name').value.trim();
+      state.factId = (dom && ty!=='user' && ty!=='feedback') ? dom+'/'+nm+'.md' : nm+'.md';
+      state.view='fact'; update();
+    } catch(e){ const m=$('e-msg'); m.style.display='inline'; m.style.color='var(--feedback)'; m.textContent = String(e.message||e); }
+  };
 }
 
 const RESULT_LIMIT = 80;   // plafond d'affichage : évite d'injecter des milliers de nœuds par frappe
@@ -517,17 +569,21 @@ function viewIndex(){
     <div class="card"><div class="fbody">${DATA.index ? md(DATA.index) : '(vide)'}</div></div>`;
 }
 
+function domainOptions(sel){
+  const doms = [...new Set(DATA.facts.map(f => (f.path||[])[0]).filter(Boolean))].sort();
+  return doms.map(d => `<option value="${esc(d)}"${d===sel?' selected':''}>${esc(d)}</option>`).join('');
+}
 function viewDraft(){
-  return `<h3 class="view-h">Rédiger un fait</h3>
-    <p class="view-p">Remplis, copie, puis lance <code style="color:var(--coral)">/memory-import</code> dans Claude Code et colle le fait.</p>
+  return `<h3 class="view-h">Créer un fait</h3>
+    <p class="view-p">Écrit en <b>local</b> (brouillon). Pour le partager : <code style="color:var(--coral)">/memory-promote</code>.</p>
     <div class="form">
       <label>nom (slug)</label><input id="d-name" placeholder="ex: regle-tva-export" autocomplete="off">
-      <label>description</label><input id="d-desc" placeholder="une ligne — sert au recall" autocomplete="off">
-      <label>type</label><select id="d-type"><option value="project">project</option><option value="reference">reference</option></select>
+      <label>description</label><input id="d-desc" placeholder="une ligne discriminante" autocomplete="off">
+      <label>type</label><select id="d-type"><option value="project">project</option><option value="reference">reference</option><option value="user">user (perso)</option><option value="feedback">feedback (perso)</option></select>
+      <label>domaine</label><input id="d-domain" list="d-domains" placeholder="ex: mailing (vide = général)"><datalist id="d-domains">${domainOptions('')}</datalist>
       <label>contenu</label><textarea id="d-body" placeholder="Le fait, concis et autonome…"></textarea>
     </div>
-    <pre class="snippet" id="snippet"></pre>
-    <div style="margin-top:10px"><button class="btn" id="copy">copier le fait</button><span class="copied" id="copied" style="display:none">copié</span></div>`;
+    <div style="margin-top:10px"><button class="btn" id="d-create">créer le fait</button><span class="copied" id="d-msg" style="display:none"></span></div>`;
 }
 
 function renderMain(){
@@ -554,15 +610,15 @@ function bindUsage(){ document.querySelectorAll('.usage .tl-step').forEach(el =>
 
 function bindDraft(){
   const v = id => ($(id) ? $(id).value.trim() : '');
-  function build(){ $('snippet').textContent =
-    `---\nname: ${v('d-name')||'<slug>'}\ndescription: ${v('d-desc')||'<description>'}\nmetadata:\n  type: ${$('d-type').value}\n---\n\n${v('d-body')||'<le fait>'}`; }
-  ['d-name','d-desc','d-type','d-body'].forEach(id => $(id).addEventListener('input', build));
-  build();
-  $('copy').addEventListener('click', async () => {
-    const t = $('snippet').textContent;
-    try { await navigator.clipboard.writeText(t); }
-    catch(e){ const r=document.createRange(); r.selectNodeContents($('snippet')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); try{document.execCommand('copy');}catch(_){} }
-    const c=$('copied'); c.style.display='inline'; setTimeout(()=>c.style.display='none',1500);
+  $('d-create').addEventListener('click', async () => {
+    try {
+      const meta = await api('POST', '/api/fact', { name:v('d-name'), description:v('d-desc'),
+        type:$('d-type').value, body:$('d-body').value, domain:v('d-domain') });
+      applyMeta(meta);
+      state.view='fact'; state.factId = (v('d-domain') && $('d-type').value!=='user' && $('d-type').value!=='feedback')
+        ? v('d-domain')+'/'+v('d-name')+'.md' : v('d-name')+'.md';
+      update();
+    } catch(e){ const m=$('d-msg'); m.style.display='inline'; m.style.color='var(--feedback)'; m.textContent = String(e.message||e); }
   });
 }
 
