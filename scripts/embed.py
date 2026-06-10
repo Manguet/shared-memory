@@ -113,3 +113,19 @@ def search(query, facts, store, embed_fn, k=8):
             ordered.append(_pointer(by_file[fp], None))
             seen.add(fp)
     return {"results": ordered, "vector_inactive": False}
+
+
+def load_fastembed_embed_fn():
+    """Renvoie un embed_fn fastembed, ou None si fastembed indisponible.
+    Import GARDÉ : aucune dépendance au niveau module ; ne lève jamais."""
+    try:
+        from fastembed import TextEmbedding
+    except Exception:
+        return None
+    try:
+        model = TextEmbedding()  # modèle par défaut (~90 Mo), téléchargé/caché localement
+    except Exception:
+        return None
+    def embed_fn(texts):
+        return [[float(x) for x in v] for v in model.embed(list(texts))]
+    return embed_fn

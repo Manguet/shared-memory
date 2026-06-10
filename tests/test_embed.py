@@ -116,5 +116,11 @@ class SearchHybridTest(unittest.TestCase):
         self.assertEqual(r["path"], ["mailing"])
 
 
+class FastembedLoaderTest(unittest.TestCase):
+    def test_loader_returns_callable_or_none_never_raises(self):
+        fn = E.load_fastembed_embed_fn()
+        self.assertTrue(fn is None or callable(fn))
+
+
 if __name__ == "__main__":
     unittest.main()
