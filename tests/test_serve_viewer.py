@@ -201,5 +201,38 @@ class DeleteTest(ServerTestBase):
         self.assertEqual(cm.exception.code, 404)
 
 
+class RenameDomainTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/"); return _token_of(html)
+
+    def test_rename_moves_folder(self):
+        write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "emailing"},
+                  token=self._token())
+        self.assertFalse(os.path.isdir(os.path.join(self.vault, "mailing")))
+        self.assertTrue(os.path.isfile(os.path.join(self.vault, "emailing", "audit.md")))
+
+    def test_rename_patches_memory(self):
+        with open(os.path.join(self.vault, "MEMORY.md"), "w", encoding="utf-8") as f:
+            f.write("# Carte\n\n## Domaines\n- **mailing** (1) → `index/mailing.md` — emails\n")
+        write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "emailing"},
+                  token=self._token())
+        mem = open(os.path.join(self.vault, "MEMORY.md"), encoding="utf-8").read()
+        self.assertIn("index/emailing.md", mem)
+        self.assertNotIn("index/mailing.md", mem)
+
+    def test_rename_to_existing_is_400(self):
+        os.makedirs(os.path.join(self.vault, "ui"), exist_ok=True)
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "ui"},
+                      token=self._token())
+        self.assertEqual(cm.exception.code, 400)
+
+    def test_rename_missing_is_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "POST", "/api/rename-domain", {"old": "nope", "new": "x"},
+                      token=self._token())
+        self.assertEqual(cm.exception.code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()

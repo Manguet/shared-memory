@@ -119,6 +119,40 @@ def delete_fact(vault, file):
     return _metadata(vault)
 
 
+def _safe_dir(vault, name):
+    vault_real = os.path.realpath(vault)
+    full = os.path.realpath(os.path.join(vault, name))
+    inside = full.startswith(vault_real + os.sep)
+    if not name or not inside:
+        raise ApiError(404, "domaine hors vault")
+    return full
+
+
+def _patch_memory_domain(vault, old, new):
+    path = os.path.join(vault, "MEMORY.md")
+    if not os.path.isfile(path):
+        return
+    txt = open(path, encoding="utf-8").read()
+    txt = txt.replace("index/%s.md" % old, "index/%s.md" % new)
+    txt = txt.replace("**%s**" % old, "**%s**" % new)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(txt)
+
+
+def rename_domain(vault, old, new):
+    if not SLUG_RE.match(old or "") or not SLUG_RE.match(new or ""):
+        raise ApiError(400, "domaine invalide (slug attendu)")
+    old_dir, new_dir = _safe_dir(vault, old), _safe_dir(vault, new)
+    if not os.path.isdir(old_dir):
+        raise ApiError(404, "domaine introuvable")
+    if os.path.exists(new_dir):
+        raise ApiError(400, "le domaine « %s » existe déjà" % new)
+    os.rename(old_dir, new_dir)
+    _patch_memory_domain(vault, old, new)
+    reshard.reshard(vault)
+    return _metadata(vault)
+
+
 def make_handler(vault, template):
     vault_real = os.path.realpath(vault)
     token = secrets.token_hex(16)
@@ -184,6 +218,9 @@ def make_handler(vault, template):
                 self._require_token()
                 if u.path == "/api/fact":
                     self._ok(create_fact(vault, self._json_body()))
+                elif u.path == "/api/rename-domain":
+                    d = self._json_body()
+                    self._ok(rename_domain(vault, d.get("old"), d.get("new")))
                 else:
                     self._send(404, "not found")
             except ApiError as e:
