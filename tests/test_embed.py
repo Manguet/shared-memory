@@ -82,5 +82,39 @@ class CosineTopkTest(unittest.TestCase):
         self.assertEqual(len(top), 2)
 
 
+class SearchHybridTest(unittest.TestCase):
+    def _facts(self):
+        return [
+            fact("mailing/a.md", "relance-j3", "relance paniers 72h", "corps relance"),
+            fact("mailing/b.md", "objet-ab", "ab test objets", "corps objet"),
+            fact("ecommerce/c.md", "tva", "taux tva", "corps fiscal"),
+        ]
+
+    def test_grep_only_when_embed_fn_none(self):
+        facts = self._facts()
+        out = E.search("relance", facts, store={}, embed_fn=None, k=8)
+        self.assertTrue(out["vector_inactive"])
+        files = [r["file"] for r in out["results"]]
+        self.assertIn("mailing/a.md", files)
+        self.assertTrue(all("body" not in r for r in out["results"]))
+        self.assertEqual(set(out["results"][0]), {"file", "name", "path", "score"})
+
+    def test_hybrid_unions_semantic_and_grep(self):
+        facts = self._facts()
+        store = E.refresh_store(facts, {}, fake_embed_fn)
+        out = E.search("tva", facts, store, embed_fn=fake_embed_fn, k=8)
+        self.assertFalse(out["vector_inactive"])
+        files = [r["file"] for r in out["results"]]
+        self.assertIn("ecommerce/c.md", files)
+        self.assertEqual(len(files), len(set(files)))
+
+    def test_results_carry_name_and_path(self):
+        facts = self._facts()
+        out = E.search("relance", facts, store={}, embed_fn=None, k=8)
+        r = next(r for r in out["results"] if r["file"] == "mailing/a.md")
+        self.assertEqual(r["name"], "relance-j3")
+        self.assertEqual(r["path"], ["mailing"])
+
+
 if __name__ == "__main__":
     unittest.main()

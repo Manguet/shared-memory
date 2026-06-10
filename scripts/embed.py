@@ -68,3 +68,48 @@ def semantic_topk(query_vec, store, k):
               for file, rec in store.items() if "vec" in rec]
     scored.sort(key=lambda t: t[1], reverse=True)
     return scored[:k]
+
+
+def grep_matches(query, facts):
+    """Fichiers dont name+description+body contient `query` (insensible casse).
+    Même logique que /search du viewer (serve-viewer.py)."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    out = []
+    for f in facts:
+        hay = " ".join((f.get("name", ""), f.get("description", ""), f.get("body", ""))).lower()
+        if q in hay:
+            out.append(f["file"])
+    return out
+
+
+def _pointer(fact, score):
+    return {"file": fact["file"], "name": fact.get("name", ""),
+            "path": fact.get("path", []), "score": score}
+
+
+def search(query, facts, store, embed_fn, k=8):
+    """Recherche hybride -> {"results": [pointeurs], "vector_inactive": bool}.
+
+    - embed_fn None : grep seul, vector_inactive=True.
+    - embed_fn fourni : top-k sémantique PUIS union des matches grep exacts, dédupliqué
+      (exhaustivité : un terme exact présent n'est jamais raté).
+    Ne renvoie JAMAIS de body : l'outil aiguille, le fait est la source.
+    """
+    by_file = {f["file"]: f for f in facts}
+    grep_files = grep_matches(query, facts)
+    if embed_fn is None:
+        results = [_pointer(by_file[fp], None) for fp in grep_files if fp in by_file]
+        return {"results": results, "vector_inactive": True}
+    qvec = embed_fn([query])[0]
+    ordered, seen = [], set()
+    for file, score in semantic_topk(qvec, store, k):
+        if file in by_file and file not in seen:
+            ordered.append(_pointer(by_file[file], round(score, 4)))
+            seen.add(file)
+    for fp in grep_files:
+        if fp in by_file and fp not in seen:
+            ordered.append(_pointer(by_file[fp], None))
+            seen.add(fp)
+    return {"results": ordered, "vector_inactive": False}
