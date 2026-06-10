@@ -54,6 +54,7 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 - **`search_memory` (MCP)** : outil que Claude appelle en session ; **recherche vectorielle locale** (fastembed, optionnel) avec **repli grep** si absent. Renvoie des **pointeurs** de faits (jamais le contenu) — *l'index aiguille, le fait est la source*.
 - **`reshard.py`** : redécoupe récursivement un domaine trop gros en sous-domaines (`part-xx`) pour qu'aucun index ne dépasse ~150 lignes ; **préserve** la carte `MEMORY.md` curée.
 - **`/memory-doctor`** : diagnostique les prérequis de la recherche (fastembed, modèle) et propose les installs — pas de dégradation silencieuse.
+- **Boucle vivante (hooks)** : au **démarrage de session**, le plugin **synchronise** le vault (`git pull --ff-only`, best-effort) et **rappelle** les faits locaux non promus (« prévois `/memory-promote` avant de fermer ») ; un rappel **en fin de session** clôt la boucle. Tout est silencieux si le projet n'est pas branché.
 
 ## Démarrage
 

@@ -260,9 +260,10 @@ navigateur Windows (forwarding automatique).
 
 ## 10. Risques (non techniques, décisifs)
 
-- **Discipline.** Si personne ne lance `/memory-promote` ni `/memory-review`, le
-  canonique se fige et devient obsolète — comme n'importe quelle doc. **À trancher :
-  qui est référent, à quelle fréquence valide-t-il, qu'est-ce qui déclenche une promotion ?**
+- **Discipline.** Si personne ne lance `/memory-promote` ni `/memory-review`, le canonique se fige
+  et devient obsolète. **Atténué** par les **hooks de session** (§12 « Boucle vivante ») : synchro
+  automatique au démarrage + rappel de promotion (début et fin de session). Reste à trancher côté
+  équipe : qui est référent, à quelle fréquence valide-t-il.
 - **Versionnage du plugin.** Une mise à jour de l'outil doit être re-pull par chacun.
 - **Confiance.** Le repo plugin est **public** et exécute git, ouvre des navigateurs, lance
   des scripts → garder le code lisible et **sans aucun secret**.
@@ -339,3 +340,10 @@ jamais de dégradation invisible.
 > Note d'échelle : prouvé sur un vault synthétique (9 300 faits) — récupération top-5 = 100 %,
 > latence de recherche < 10 ms à taille réelle (≤ 100 faits). Détails dans les specs/plans
 > `docs/superpowers/`.
+
+### Boucle vivante : hooks de session
+Deux **hooks plugin** referment la boucle sans discipline manuelle. `SessionStart` :
+`git pull --ff-only` **best-effort** (time-boxé, non destructif — refuse sans écraser les brouillons
+étage 1) pour ne pas travailler sur une mémoire périmée, puis rappelle les faits locaux non promus
+(« prévois `/memory-promote` avant de fermer »). `SessionEnd` : dernier rappel. Tout est silencieux
+si le projet n'est pas branché ou en cas d'échec (jamais bloquant). Script : `scripts/hook-memory.sh`.
