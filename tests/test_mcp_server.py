@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
@@ -53,6 +54,32 @@ class HandleRequestTest(unittest.TestCase):
     def test_unknown_method_is_error(self):
         resp = M.handle_request({"jsonrpc": "2.0", "id": 5, "method": "foo/bar"}, fake_runner)
         self.assertEqual(resp["error"]["code"], -32601)
+
+
+class ContextTest(unittest.TestCase):
+    def test_build_context_errors_when_vault_unresolved(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.environ["SM_REGISTRY"] = os.path.join(d, "registry.json")  # absent
+            os.environ["CLAUDE_PROJECT_DIR"] = "/no/such/project"
+            try:
+                ctx = M.build_context()
+            finally:
+                os.environ.pop("SM_REGISTRY", None)
+                os.environ.pop("CLAUDE_PROJECT_DIR", None)
+            self.assertIn("error", ctx)
+
+    def test_run_search_grep_fallback_returns_pointers(self):
+        with tempfile.TemporaryDirectory() as d:
+            vault = os.path.join(d, "vault", "mailing")
+            os.makedirs(vault)
+            with open(os.path.join(vault, "a.md"), "w", encoding="utf-8") as f:
+                f.write("---\nname: relance-j3\ndescription: relance paniers 72h\n"
+                        "metadata:\n  type: project\n---\ncorps relance")
+            ctx = {"slug": "-t", "vault": os.path.join(d, "vault")}
+            out = M.run_search(ctx, "relance", 8)
+            files = [r["file"] for r in out["results"]]
+            self.assertIn(os.path.join("mailing", "a.md"), files)
+            self.assertTrue(all("body" not in r for r in out["results"]))
 
 
 if __name__ == "__main__":
