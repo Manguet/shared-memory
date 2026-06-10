@@ -36,14 +36,17 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
 5. **Écrire un fichier par fait** dans `<domaine>/<fait>.md` du clone, en suivant
    `${CLAUDE_PLUGIN_ROOT}/assets/fact-template.md` :
    - `name` : slug kebab-case unique (vérifier l'absence de collision avec Glob/Grep) ;
-   - `description` : une ligne pour le recall ;
+   - `description` : une ligne **discriminante** (distingue le fait de ses voisins du même
+     domaine) — elle sert au recall **et** alimente directement le sous-index compact (DRY) ;
    - `metadata.type` : `project` ou `reference` (jamais `user`/`feedback` ici) ;
    - corps concis, liens `[[autre-slug]]` vers les faits connexes.
 
-6. **Mettre à jour le sous-index** `index/<domaine>.md` : ajouter une section pour le fait
-   (titre + type + résumé + pointeur `→ <domaine>/<fait>.md`) ; le créer s'il n'existe pas.
-   Si le domaine est **nouveau**, ajouter sa ligne dans la carte `MEMORY.md` (section « Domaines »).
-   Si le sous-index approche **~150 lignes**, **alerter** et proposer un découpage (semi-auto).
+6. **Mettre à jour le sous-index** `index/<domaine>.md` : ajouter **une ligne compacte** pour le
+   fait — `` - `<nom>` — <description> · <type> → `<domaine>/<fait>.md` `` (reprendre **telle quelle**
+   la `description` du frontmatter, DRY) ; le créer s'il n'existe pas. Si le domaine est **nouveau**,
+   ajouter sa ligne dans la carte `MEMORY.md` (section « Domaines »). Si le sous-index approche
+   **~150 lignes**, **alerter** et proposer un **découpage en sous-domaines** `index/<domaine>/<sous>.md`
+   (semi-auto). Format détaillé : `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`.
 
 7. **Régénérer le viewer** (pour qu'une vue déjà ouverte se mette à jour au rechargement de l'onglet) :
 
