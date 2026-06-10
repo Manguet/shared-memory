@@ -123,7 +123,10 @@ def load_fastembed_embed_fn():
     except Exception:
         return None
     try:
-        model = TextEmbedding()  # modèle par défaut (~90 Mo), téléchargé/caché localement
+        # cache PERSISTANT (sinon fastembed télécharge dans /tmp, effacé au reboot → re-download)
+        cache = os.path.join(os.path.expanduser("~"), ".shared-memory", "models")
+        os.makedirs(cache, exist_ok=True)
+        model = TextEmbedding(cache_dir=cache)  # modèle par défaut (~90 Mo), local
     except Exception:
         return None
     def embed_fn(texts):

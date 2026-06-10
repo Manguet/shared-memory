@@ -35,7 +35,9 @@ def vault_clone_for_slug(s, registry=None):
 
 
 def embeddings_root():
-    return os.path.join(os.path.expanduser("~"), ".shared-memory", "embeddings")
+    return os.environ.get(
+        "SM_EMBEDDINGS_DIR",
+        os.path.join(os.path.expanduser("~"), ".shared-memory", "embeddings"))
 
 
 def store_path_for_slug(s):
