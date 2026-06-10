@@ -93,5 +93,46 @@ class McpJsonTest(unittest.TestCase):
                             for a in srv["args"]))
 
 
+class RobustnessTest(unittest.TestCase):
+    def test_runner_exception_returns_jsonrpc_error(self):
+        def boom(query, k):
+            raise RuntimeError("embedding planté")
+        req = {"jsonrpc": "2.0", "id": 9, "method": "tools/call",
+               "params": {"name": "search_memory", "arguments": {"query": "x"}}}
+        resp = M.handle_request(req, boom)
+        self.assertEqual(resp["id"], 9)
+        self.assertEqual(resp["error"]["code"], -32603)
+
+    def test_negative_k_clamped_to_at_least_one(self):
+        seen = {}
+        def runner(query, k):
+            seen["k"] = k
+            return {"results": [], "vector_inactive": False}
+        req = {"jsonrpc": "2.0", "id": 10, "method": "tools/call",
+               "params": {"name": "search_memory", "arguments": {"query": "x", "k": -5}}}
+        M.handle_request(req, runner)
+        self.assertGreaterEqual(seen["k"], 1)
+
+    def test_run_search_degrades_to_grep_when_embedding_raises(self):
+        import tempfile
+        orig = M.embed.load_fastembed_embed_fn
+        def raising(texts):
+            raise RuntimeError("modèle corrompu")
+        M.embed.load_fastembed_embed_fn = lambda: raising
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                vd = os.path.join(d, "vault", "mailing")
+                os.makedirs(vd)
+                with open(os.path.join(vd, "a.md"), "w", encoding="utf-8") as f:
+                    f.write("---\nname: relance-j3\ndescription: relance paniers 72h\n"
+                            "metadata:\n  type: project\n---\ncorps relance")
+                ctx = {"slug": "-t", "vault": os.path.join(d, "vault")}
+                out = M.run_search(ctx, "relance", 8)
+        finally:
+            M.embed.load_fastembed_embed_fn = orig
+        self.assertTrue(out["vector_inactive"])
+        self.assertTrue(any(r["file"].endswith("a.md") for r in out["results"]))
+
+
 if __name__ == "__main__":
     unittest.main()

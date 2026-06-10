@@ -67,7 +67,12 @@ def handle_request(req, runner):
             return {"jsonrpc": "2.0", "id": rid,
                     "error": {"code": -32602, "message": "unknown tool"}}
         args = params.get("arguments") or {}
-        out = runner(args.get("query", ""), int(args.get("k", 8) or 8))
+        k = max(1, int(args.get("k", 8) or 8))
+        try:
+            out = runner(args.get("query", ""), k)
+        except Exception as e:
+            return {"jsonrpc": "2.0", "id": rid,
+                    "error": {"code": -32603, "message": "search failed: %s" % e}}
         return {"jsonrpc": "2.0", "id": rid, "result": {
             "content": [{"type": "text", "text": json.dumps(out, ensure_ascii=False)}]
         }}
@@ -93,9 +98,12 @@ def run_search(ctx, query, k):
     embed_fn = embed.load_fastembed_embed_fn()
     store = {}
     if embed_fn is not None:
-        store_path = paths.store_path_for_slug(ctx["slug"])
-        store = embed.refresh_store(facts, embed.load_store(store_path), embed_fn)
-        embed.save_store(store_path, store)
+        try:
+            store_path = paths.store_path_for_slug(ctx["slug"])
+            store = embed.refresh_store(facts, embed.load_store(store_path), embed_fn)
+            embed.save_store(store_path, store)
+        except Exception:
+            embed_fn, store = None, {}   # dégradation propre -> grep + vector_inactive
     return embed.search(query, facts, store, embed_fn, k)
 
 
