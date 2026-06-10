@@ -65,6 +65,15 @@ class CountUnpromotedTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertEqual(count_unpromoted(d), "0")
 
+    def test_counts_accented_and_spaced_names(self):
+        write(self.c, "mailing/modèle.md", FACT % ("modele", "project"))
+        write(self.c, "mailing/résumé été.md", FACT % ("resume", "project"))
+        self.assertEqual(count_unpromoted(self.c), "2")
+
+    def test_counts_staged_rename_once(self):
+        git(self.c, "mv", "mailing/a.md", "mailing/a2.md")
+        self.assertEqual(count_unpromoted(self.c), "1")
+
 
 def run_hook(mode, project_dir, registry):
     env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, SM_REGISTRY=registry)

@@ -14,7 +14,7 @@ clone="$(sm_vault_clone_for_slug "$(sm_slug "${CLAUDE_PROJECT_DIR:-$PWD}")" 2>/d
 
 ahead=0
 if [ "$MODE" = "start" ]; then
-  timeout 5 git -C "$clone" pull --ff-only >/dev/null 2>&1 || true   # non destructif ; refuse si ff impossible
+  GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$clone" pull --ff-only >/dev/null 2>&1 || true   # non destructif, sans prompt TTY
   ahead="$(git -C "$clone" rev-list --count HEAD..origin/main 2>/dev/null || printf 0)"
 fi
 

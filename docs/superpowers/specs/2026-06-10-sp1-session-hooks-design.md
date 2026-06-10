@@ -71,7 +71,7 @@ figé au plan en suivant la convention des hooks plugin Claude Code.
 
 ## Compter « non promus » (`sm_count_unpromoted <clone>`)
 
-Nombre de fichiers de **faits `.md`** de la working copy qui diffèrent d'`origin/main`
+Nombre de fichiers de **faits `.md`** modifiés/ajoutés/supprimés/non suivis dans la working copy (**modifs non commitées** = brouillons étage 1)
 (ajoutés / modifiés / supprimés / non suivis), en **excluant** :
 - `MEMORY.md` et `index/**` (régénérés par `reshard`, ce ne sont pas des faits) ;
 - les **faits perso** : fichiers `feedback_*` et faits dont le frontmatter porte
