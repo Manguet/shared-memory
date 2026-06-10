@@ -167,6 +167,7 @@ marketplace GitHub publique. Le repo étant public, le `git clone` ne demande **
 | `/memory-promote` | proposer mes faits locaux → `pending` (vérif contre le code) | écriture |
 | `/memory-review` | un référent valide `pending → canonique` | gouvernance |
 | `/memory-ui` | ouvrir l'interface visuelle (navigateur) | visualisation |
+| `/memory-doctor` | diagnostiquer la recherche sémantique + proposer les installs | diagnostic |
 
 > **Normaliser, pas importer-sync.** `/memory-import` transforme de la doc brute en
 > faits atomiques (frontmatter + 1 fait/fichier + ligne d'index). Le transport, c'est git.
@@ -208,21 +209,24 @@ Claude Code ne **dessine pas** d'UI custom (c'est un terminal). Mais une command
 **lancer une interface externe** : ouvrir une page dans le navigateur déjà présent.
 Pattern : l'IA **demande confirmation** avant d'ouvrir l'URL.
 
-| Phase | Ce que c'est | Coût |
-|-------|--------------|------|
-| **Phase 1 — Visualisation** | un **fichier HTML autonome** qui affiche le vault (lecture, recherche, liens). Aucun serveur. | faible |
-| **Phase 2 — Guidage (sans backend)** | le viewer ajoute un encart **commandes** + un **générateur de fait** (snippet à copier → `/memory-import`) ; chaque skill termine par la **prochaine commande**. | faible |
+**Mise en œuvre actuelle : un mini-serveur local en lecture seule.** Le viewer n'est plus un
+fichier HTML statique (le mode statique a été **retiré**) mais un petit serveur `serve-viewer.py`
+(`http.server`, bind `127.0.0.1`) lancé par `/memory-ui` / `view.sh` :
+- l'index envoyé au navigateur ne contient que les **métadonnées** des faits (léger) ; le **corps**
+  d'un fait est servi **à la demande** (`GET /fact`) — tient à l'échelle (milliers de faits) ;
+- **arbre récursif N-niveaux** dans la sidebar (rendu paresseux) ; **recherche hybride** (filtre
+  instantané côté client + plein-texte serveur `GET /search`) ;
+- **sécurité** : localhost uniquement, validation anti-traversal (`realpath` dans le vault), ne
+  sert que des `.md` ;
+- **guidage intégré** : encart commandes, **générateur de fait** (snippet → `/memory-import`),
+  guide d'utilisation ; chaque skill termine par la **prochaine commande**.
 
-**Décision : pas d'UI d'écriture serveur.** L'écriture et la validation restent
-**conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) via git
-(revue de branche). Le viewer reste un **fichier HTML statique** : il *guide* (commandes, snippets)
-mais n'écrit jamais.
+`http://localhost:PORT` est plus fiable que `file://wsl.localhost` sous WSL2.
 
-> **Écarté :** un serveur local d'écriture, et a fortiori un « chat-agent » embarqué dans la
-> page. Ce dernier ne se branche pas sur la session Claude Code en cours (pas d'API exposée) :
-> il faudrait un agent séparé (Agent SDK/API) = backend + clé API + coût par token + surface de
-> sécurité. C'est **plus** lourd que le mini-serveur, et redondant avec les skills + GitHub. Le
-> « chat connecté à Claude » existe déjà : c'est Claude Code lui-même.
+**Toujours pas d'UI d'écriture.** Le serveur est **lecture seule** : l'écriture et la validation
+restent **conversationnelles** (skills `/memory-import`, `/memory-promote`, `/memory-review`) via
+git (revue de branche). Un chat-agent embarqué reste écarté — le « chat connecté à Claude », c'est
+Claude Code lui-même.
 
 Ouverture du navigateur cross-platform : `open` (Mac) · `wslview` / `cmd.exe start` (WSL2)
 · `xdg-open` (Linux). Un serveur localhost lancé dans WSL2 est joignable depuis le
@@ -276,9 +280,13 @@ navigateur Windows (forwarding automatique).
 - **Distribution du plugin = repo public**, install **locale** par script `install.sh`
   (clone + activation par chemin local). `marketplace.json` ≠ catalogue public (aucun
   listing). Vaults restent privés.
-- Interface : viewer HTML statique (Phase 1) + **guidage sans backend** (Phase 2 : encart
-  commandes, générateur de fait/snippet, prochaine-commande dans les skills). Pas d'UI serveur
-  ni de chat embarqué — écriture/validation = skills (revue de branche git).
+- Interface : **mini-serveur local lecture seule** (`serve-viewer.py`, `http://localhost`) — le
+  mode HTML statique `file://` a été **retiré** ; guidage intégré (commandes, générateur de fait,
+  guide d'utilisation). Pas d'UI d'**écriture** ni de chat embarqué — écriture/validation = skills
+  (revue de branche git). Voir §8 et §12.
+- **Sharding par domaine** (carte + sous-index compacts) + **`reshard.py`** (redécoupage récursif) ;
+  **recherche sémantique `search_memory`** (serveur MCP, fastembed optionnel, repli grep) +
+  **`/memory-doctor`** pour les prérequis. Voir §12.
 
 - Repo plugin : `github.com/Manguet/shared-memory` (public).
 - Vault : emplacement/hébergement libres ; **catalogue de vaults disponibles** pour le setup.
@@ -288,3 +296,41 @@ navigateur Windows (forwarding automatique).
 - Nombre d'approbations requis pour merger (1 par défaut, ou 2 pour plus de rigueur).
 - Ce qui déclenche une promotion (proposé : fin de session de travail).
 - Où vit le catalogue de vaults (dans le repo plugin, ou fichier de config dédié).
+
+---
+
+## 12. Sous-systèmes livrés (sharding, recherche, reshard, doctor)
+
+Ces couches ont été ajoutées **après** la conception initiale ci-dessus ; elles n'en changent pas
+les principes (substrat fichiers + git, deux étages, gouvernance par branche). Elles optimisent la
+**lecture** et le **passage à l'échelle**.
+
+### Sharding par domaine
+Le vault n'est plus plat : `MEMORY.md` est une **carte de domaines** (chargée au démarrage, bornée
+en taille) ; chaque domaine a un **sous-index compact** `index/<domaine>.md` (1 ligne/fait, lu à la
+demande) ; les faits vivent dans `<domaine>/<fait>.md`. Détail et format :
+[`docs/domain-convention.md`](domain-convention.md).
+
+### `search_memory` — recherche sémantique (MCP)
+Un **serveur MCP** (`scripts/mcp-server.py`, déclaré dans `.mcp.json`) expose l'outil
+`search_memory(query, k)` que Claude appelle en session. **Embeddings locaux optionnels** (fastembed,
+modèle **multilingue**) avec **store hors vault** (`~/.shared-memory/embeddings/`) à fraîcheur lazy
+par hash ; **repli grep** automatique si fastembed est absent (drapeau `vector_inactive`). L'outil
+renvoie des **pointeurs** `{file, name, path, score}`, **jamais le corps** : *l'index aiguille, le
+fait reste la source* — Claude relit le fait avant d'affirmer.
+
+### `reshard.py` — redécoupage récursif
+Maintient l'invariant « ≤ ~150 faits directs et ≤ ~150 sous-dossiers par dossier » : un domaine trop
+gros est scindé récursivement en sous-domaines (`part-xx`), tous les `index/**` sont régénérés.
+**Idempotent** et **préserve** la carte `MEMORY.md` curée (intro, « Patterns & Conventions »).
+Appelé par `/memory-import` et `/memory-promote` (filet de sécurité de lisibilité).
+
+### `/memory-doctor` — pas de dégradation silencieuse
+`scripts/doctor.py` diagnostique les prérequis de la recherche (python, `fastembed`, modèle,
+`.mcp.json`) avec un **remède** par manque ; le skill présente le diagnostic et **propose** les
+installs (l'utilisateur valide). Sans fastembed, la recherche tourne en grep **et le signale** —
+jamais de dégradation invisible.
+
+> Note d'échelle : prouvé sur un vault synthétique (9 300 faits) — récupération top-5 = 100 %,
+> latence de recherche < 10 ms à taille réelle (≤ 100 faits). Détails dans les specs/plans
+> `docs/superpowers/`.
