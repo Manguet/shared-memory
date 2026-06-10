@@ -112,17 +112,26 @@ def _write_index(vault, seg, kind, entries):
         f.write("\n".join(lines) + "\n")
 
 
-def _write_memory(vault, domain_counts):
+def _ensure_memory(vault, domain_counts):
+    """Crée une carte MEMORY.md minimale UNIQUEMENT si elle est absente. Ne touche JAMAIS une
+    carte existante : elle est curée à la main (intro, sections « Patterns & Conventions » /
+    « Général », descriptions de domaines) — la réécrire détruirait du contenu humain irremplaçable.
+    La carte des domaines reste maintenue par l'humain/les skills (elle ne change qu'à la création
+    d'un domaine, ce que reshard ne fait pas : il ne fait que redécouper l'intérieur des domaines)."""
+    path = os.path.join(vault, "MEMORY.md")
+    if os.path.exists(path):
+        return
     lines = ["# Mémoire — carte des domaines", "", "## Domaines", ""]
     for domain in sorted(domain_counts):
         lines.append("- %s (%d faits) → index/%s.md" % (domain, domain_counts[domain], domain))
-    with open(os.path.join(vault, "MEMORY.md"), "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
 
 def reshard(vault, max_entries=DEFAULT_MAX):
-    """Applique l'invariant ≤ max_entries par dossier ; régénère index/** + MEMORY.md.
-    Idempotent. Renvoie {domaine: nb_faits}."""
+    """Applique l'invariant ≤ max_entries par dossier ; régénère `index/**`.
+    PRÉSERVE la carte `MEMORY.md` curée (ne la crée que si absente). Idempotent.
+    Renvoie {domaine: nb_faits}."""
     by_domain, perso = _domain_facts(vault)
     all_placements, all_indexes, counts = [], [], {}
     for domain, facts in sorted(by_domain.items()):
@@ -149,7 +158,7 @@ def reshard(vault, max_entries=DEFAULT_MAX):
             f.write(raw)
     for seg, kind, entries in all_indexes:
         _write_index(vault, seg, kind, entries)
-    _write_memory(vault, counts)
+    _ensure_memory(vault, counts)
     return counts
 
 

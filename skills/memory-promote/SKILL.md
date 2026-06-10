@@ -53,8 +53,9 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<clone>"
    ```
 
-   reshard régénère `index/**` (lignes compactes) + `MEMORY.md` (domaines), et **découpe en
-   sous-domaines** tout domaine dépassant ~150 faits (déplacement de faits). Si un découpage a lieu,
+   reshard régénère `index/**` (lignes compactes) et **découpe en sous-domaines** tout domaine
+   dépassant ~150 faits (déplacement de faits). Il **préserve la carte `MEMORY.md`** curée ; si un
+   **nouveau domaine** apparaît, ajouter sa ligne à `MEMORY.md` à la main. Si un découpage a lieu,
    le **signaler** dans le résumé de proposition.
 
 6. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :

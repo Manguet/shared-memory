@@ -214,5 +214,29 @@ class CliTest(unittest.TestCase):
             self.assertTrue(len(subdirs) >= 2)
 
 
+class ReshardMemoryTest(unittest.TestCase):
+    def test_existing_curated_memory_is_preserved(self):
+        with tempfile.TemporaryDirectory() as v:
+            curated = ("# Ma carte\n\n## Domaines\n"
+                       "- mailing (1) → index/mailing.md — emails, MailingBundle\n\n"
+                       "## Patterns & Conventions\n- convention humaine précieuse\n")
+            with open(os.path.join(v, "MEMORY.md"), "w", encoding="utf-8") as f:
+                f.write(curated)
+            for i in range(3):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=5)
+            after = open(os.path.join(v, "MEMORY.md"), encoding="utf-8").read()
+            self.assertEqual(after, curated)                       # intacte, mot pour mot
+            self.assertIn("convention humaine précieuse", after)
+
+    def test_memory_created_when_absent(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(3):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=5)
+            mem = open(os.path.join(v, "MEMORY.md"), encoding="utf-8").read()
+            self.assertIn("- mailing (3 faits) → index/mailing.md", mem)
+
+
 if __name__ == "__main__":
     unittest.main()

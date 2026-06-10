@@ -64,8 +64,11 @@ que quand un index parent déborde (cf. capacité : 2 niveaux ≈ 22 500 faits, 
 Le redécoupage est porté par **`scripts/reshard.py`** (invariant : *aucun dossier ne dépasse
 ~150 faits directs ni ~150 sous-dossiers*). Il **restructure** les faits sur disque (déplacement
 en sous-domaines `part-xx` seulement là où le seuil est franchi, donc **idempotent** et
-sans toucher un sous-arbre déjà conforme) puis **régénère tout `index/**` + `MEMORY.md`** au format
-compact. Les skills l'appellent au lieu d'écrire l'index à la main :
+sans toucher un sous-arbre déjà conforme) puis **régénère tout `index/**`** au format
+compact. Il **préserve** la carte `MEMORY.md` (curée à la main : intro, « Patterns & Conventions »,
+« Général », descriptions de domaines) — il ne la crée que si elle est **absente** ; la carte des
+domaines reste maintenue par l'humain/les skills (elle ne change qu'à la **création** d'un domaine).
+Les skills l'appellent au lieu d'écrire les sous-index à la main :
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<vault>" [--max-entries 150]

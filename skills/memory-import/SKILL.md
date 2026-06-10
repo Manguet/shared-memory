@@ -50,8 +50,10 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
    ```
 
    reshard reconstruit `index/**` au format compact (description reprise du frontmatter, DRY) et
-   crée les domaines à la carte `MEMORY.md`. S'il a créé des sous-domaines `part-xx`, le **signaler**
-   (l'utilisateur pourra les renommer). Détails : `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`.
+   **préserve la carte `MEMORY.md`** (curée à la main). Si le fait crée un **nouveau domaine**,
+   ajouter sa ligne à la section « Domaines » de `MEMORY.md` **à la main** (reshard n'y touche pas).
+   Si reshard a créé des sous-domaines `part-xx`, le **signaler** (l'utilisateur pourra les
+   renommer). Détails : `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`.
 
 7. **Régénérer le viewer** (pour qu'une vue déjà ouverte se mette à jour au rechargement de l'onglet) :
 
