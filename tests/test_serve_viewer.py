@@ -148,5 +148,39 @@ class CreateTest(ServerTestBase):
         self.assertEqual(cm.exception.code, 400)
 
 
+class UpdateTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/"); return _token_of(html)
+
+    def test_update_changes_fields(self):
+        write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
+                  {"name": "audit", "type": "reference", "description": "maj", "body": "neuf", "domain": "mailing"},
+                  token=self._token())
+        txt = open(os.path.join(self.vault, "mailing", "audit.md"), encoding="utf-8").read()
+        self.assertIn("type: reference", txt)
+        self.assertIn("neuf", txt)
+
+    def test_update_rename_moves_file(self):
+        write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
+                  {"name": "audit-2", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
+                  token=self._token())
+        self.assertFalse(os.path.isfile(os.path.join(self.vault, "mailing", "audit.md")))
+        self.assertTrue(os.path.isfile(os.path.join(self.vault, "mailing", "audit-2.md")))
+
+    def test_update_change_domain_relocates(self):
+        write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
+                  {"name": "audit", "type": "project", "description": "d", "body": "b", "domain": "ui"},
+                  token=self._token())
+        self.assertFalse(os.path.isfile(os.path.join(self.vault, "mailing", "audit.md")))
+        self.assertTrue(os.path.isfile(os.path.join(self.vault, "ui", "audit.md")))
+
+    def test_update_missing_is_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "PUT", "/api/fact?f=mailing/nope.md",
+                      {"name": "nope", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
+                      token=self._token())
+        self.assertEqual(cm.exception.code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()

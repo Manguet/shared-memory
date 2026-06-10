@@ -93,6 +93,23 @@ def create_fact(vault, data):
     return _metadata(vault)
 
 
+def update_fact(vault, file, data):
+    old = _safe_path(vault, file)
+    if not os.path.isfile(old):
+        raise ApiError(404, "fait introuvable")
+    name, typ, domain, desc, body = _validate(data)
+    new = _safe_path(vault, _rel_for(name, domain))
+    if new != old and os.path.exists(new):
+        raise ApiError(400, "un fait « %s » existe déjà à cet emplacement" % name)
+    os.makedirs(os.path.dirname(new), exist_ok=True)
+    with open(new, "w", encoding="utf-8") as f:
+        f.write(_fact_text(name, desc, typ, body))
+    if new != old:
+        os.remove(old)
+    reshard.reshard(vault)
+    return _metadata(vault)
+
+
 def make_handler(vault, template):
     vault_real = os.path.realpath(vault)
     token = secrets.token_hex(16)
@@ -158,6 +175,20 @@ def make_handler(vault, template):
                 self._require_token()
                 if u.path == "/api/fact":
                     self._ok(create_fact(vault, self._json_body()))
+                else:
+                    self._send(404, "not found")
+            except ApiError as e:
+                self._send(e.status, e.message)
+            except (ValueError, OSError) as e:
+                self._send(400, "erreur: %s" % e)
+
+        def do_PUT(self):
+            u = urlparse(self.path)
+            try:
+                self._require_token()
+                if u.path == "/api/fact":
+                    f = (parse_qs(u.query).get("f") or [""])[0]
+                    self._ok(update_fact(vault, f, self._json_body()))
                 else:
                     self._send(404, "not found")
             except ApiError as e:
