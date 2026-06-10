@@ -32,7 +32,7 @@ vault/
 1. **Déduire le domaine** du sujet du fait (ex. emails → `mailing`, fiscalité → `ecommerce`).
 2. **Garde-fou anti-prolifération** : lire la carte `MEMORY.md` et, si un domaine existant est proche (`mailing` vs `emails` vs `mail`), **proposer le domaine existant** plutôt que d'en créer un nouveau. Demander à l'utilisateur en cas de doute.
 3. Écrire le fait dans `<domaine>/<fait>.md`.
-4. **Mettre à jour le sous-index** `index/<domaine>.md` (ajouter la section du fait). Le créer s'il n'existe pas.
+4. **Mettre à jour le sous-index** `index/<domaine>.md` (ajouter la ligne compacte du fait, cf. « Format d'une ligne de sous-index »). Le créer s'il n'existe pas.
 5. Si le domaine est **nouveau**, ajouter sa ligne dans la carte `MEMORY.md` (section « Domaines »).
 
 ## Profondeur récursive sans plafond
