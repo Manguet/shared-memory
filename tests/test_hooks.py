@@ -66,5 +66,53 @@ class CountUnpromotedTest(unittest.TestCase):
             self.assertEqual(count_unpromoted(d), "0")
 
 
+def run_hook(mode, project_dir, registry):
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, SM_REGISTRY=registry)
+    r = subprocess.run(["bash", HOOK, mode], capture_output=True, text=True, env=env)
+    return r.returncode, r.stdout.strip()
+
+
+class HookScriptTest(unittest.TestCase):
+    def test_noop_when_not_branched(self):
+        with tempfile.TemporaryDirectory() as d:
+            reg = os.path.join(d, "registry.json")
+            with open(reg, "w") as f:
+                f.write('{"projets": []}')
+            rc, out = run_hook("start", "/no/such/project", reg)
+            self.assertEqual(rc, 0)
+            self.assertEqual(out, "")
+
+    def test_end_reminds_when_unpromoted(self):
+        with tempfile.TemporaryDirectory() as d:
+            clone = os.path.join(d, "clone")
+            os.makedirs(clone)
+            init_repo(clone)
+            write(clone, "mailing/a.md", FACT % ("a", "project"))
+            git(clone, "add", "-A")
+            git(clone, "commit", "-qm", "base")
+            write(clone, "mailing/b.md", FACT % ("b", "project"))
+            reg = os.path.join(d, "registry.json")
+            with open(reg, "w") as f:
+                json.dump({"projets": [{"slug": "-tmp-proj", "clone": clone}]}, f)
+            rc, out = run_hook("end", "/tmp/proj", reg)
+            self.assertEqual(rc, 0)
+            self.assertIn("/memory-promote", out)
+
+    def test_end_silent_when_clean(self):
+        with tempfile.TemporaryDirectory() as d:
+            clone = os.path.join(d, "clone")
+            os.makedirs(clone)
+            init_repo(clone)
+            write(clone, "mailing/a.md", FACT % ("a", "project"))
+            git(clone, "add", "-A")
+            git(clone, "commit", "-qm", "base")
+            reg = os.path.join(d, "registry.json")
+            with open(reg, "w") as f:
+                json.dump({"projets": [{"slug": "-tmp-proj", "clone": clone}]}, f)
+            rc, out = run_hook("end", "/tmp/proj", reg)
+            self.assertEqual(rc, 0)
+            self.assertEqual(out, "")
+
+
 if __name__ == "__main__":
     unittest.main()
