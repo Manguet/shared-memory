@@ -33,6 +33,8 @@ def balanced_chunks(items, k):
 def split_tree(items, n):
     """Arbre équilibré : feuille si ≤ n items, sinon ≤ n enfants, récursif sans plafond.
     Renvoie {'leaf': [items]} ou {'children': [sous-arbres]}."""
+    if n < 2:
+        raise ValueError("max_entries doit être ≥ 2 (un seuil de 1 n'a pas de sens hiérarchique)")
     if len(items) <= n:
         return {"leaf": list(items)}
     k = min(n, math.ceil(len(items) / n))
@@ -46,17 +48,21 @@ def _read_raw(path):
 
 def _domain_facts(vault):
     """Groupe les faits par domaine de 1er niveau (path non vide). Faits racine ignorés.
-    Chaque fait porte 'raw' (contenu fichier), trié par name."""
+    Les faits perso (type user/feedback) égarés dans un domaine sont renvoyés à part pour
+    être relogés en racine (jamais shardés). Chaque fait porte 'raw', trié par name."""
     facts, _ = bv.collect_facts(vault, include_body=False)
-    by_domain = {}
+    by_domain, perso = {}, []
     for fa in facts:
-        if not fa["path"]:                  # fait racine (perso/général) -> jamais shardé
+        if not fa["path"]:                  # fait déjà à la racine -> laissé tel quel
             continue
         fa = dict(fa, raw=_read_raw(os.path.join(vault, fa["file"])))
+        if fa["type"] in ("user", "feedback"):
+            perso.append(fa)                # perso égaré dans un domaine -> à reloger en racine
+            continue
         by_domain.setdefault(fa["path"][0], []).append(fa)
     for d in by_domain:
         by_domain[d].sort(key=lambda f: f["name"])
-    return by_domain
+    return by_domain, perso
 
 
 def _count_leaf_facts(node):
@@ -117,7 +123,7 @@ def _write_memory(vault, domain_counts):
 def reshard(vault, max_entries=DEFAULT_MAX):
     """Applique l'invariant ≤ max_entries par dossier ; régénère index/** + MEMORY.md.
     Idempotent. Renvoie {domaine: nb_faits}."""
-    by_domain = _domain_facts(vault)
+    by_domain, perso = _domain_facts(vault)
     all_placements, all_indexes, counts = [], [], {}
     for domain, facts in sorted(by_domain.items()):
         names = [f["name"] for f in facts]
@@ -131,6 +137,11 @@ def reshard(vault, max_entries=DEFAULT_MAX):
     for domain in by_domain:
         shutil.rmtree(os.path.join(vault, domain), ignore_errors=True)
     shutil.rmtree(os.path.join(vault, "index"), ignore_errors=True)
+    for fa in perso:                        # reloger les faits perso égarés à la racine
+        dest = os.path.join(vault, fa["name"] + ".md")
+        if not os.path.exists(dest):
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write(fa["raw"])
     for rel, raw in all_placements:
         dest = os.path.join(vault, rel)
         os.makedirs(os.path.dirname(dest), exist_ok=True)

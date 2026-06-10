@@ -40,6 +40,12 @@ def main():
     ap.add_argument("--max-entries", type=int, default=15)
     args = ap.parse_args()
 
+    src = os.path.realpath(args.source) if args.source else None
+    dst = os.path.realpath(args.dest)
+    if src and (dst == src or src.startswith(dst + os.sep)):
+        sys.exit("refus : dest (%s) est la source ou la contient" % args.dest)
+    if dst == os.path.realpath(os.sep):
+        sys.exit("refus : dest = racine du système")
     if os.path.exists(args.dest):
         shutil.rmtree(args.dest)
     gen.generate(args.dest, source=args.source, domains=30, fmin=120, fmax=500, seed=0)

@@ -35,6 +35,10 @@ class HelpersTest(unittest.TestCase):
         self.assertTrue(any("children" in c for c in t["children"]))
         self.assertLessEqual(len(t["children"]), 3)
 
+    def test_split_tree_rejects_threshold_below_two(self):
+        with self.assertRaises(ValueError):
+            R.split_tree([1, 2, 3], 1)
+
 
 import tempfile
 
@@ -100,6 +104,20 @@ class ReshardCoreTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(v, "feedback_x.md")))
             for f in md_files_under(os.path.join(v, "index")):
                 self.assertNotIn("feedback-x", open(f, encoding="utf-8").read())
+
+    def test_misplaced_perso_fact_relocated_to_root(self):
+        with tempfile.TemporaryDirectory() as v:
+            p = os.path.join(v, "mailing", "feedback_oops.md")
+            os.makedirs(os.path.dirname(p))
+            with open(p, "w", encoding="utf-8") as f:
+                f.write("---\nname: feedback-oops\ndescription: d\nmetadata:\n  type: feedback\n---\nx")
+            for i in range(3):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=5)
+            self.assertTrue(os.path.isfile(os.path.join(v, "feedback-oops.md")))           # relogé racine
+            self.assertFalse(os.path.isfile(os.path.join(v, "mailing", "feedback_oops.md")))
+            for f in md_files_under(os.path.join(v, "index")):
+                self.assertNotIn("feedback-oops", open(f, encoding="utf-8").read())          # hors index
 
     def test_memory_lists_domains(self):
         with tempfile.TemporaryDirectory() as v:
