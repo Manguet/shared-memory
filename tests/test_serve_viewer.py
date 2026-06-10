@@ -8,6 +8,24 @@ import urllib.error
 import urllib.request
 from http.server import HTTPServer
 
+
+def _token_of(base_get):
+    """Extrait le jeton CSRF injecté dans la page (DATA.token)."""
+    html = base_get
+    data = json.loads(html[html.index("<x>") + 3: html.index("</x>")])
+    return data.get("token")
+
+
+def write_req(port, method, path, body=None, token="SKIP"):
+    url = "http://127.0.0.1:%d%s" % (port, path)
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    if data is not None:
+        req.add_header("Content-Type", "application/json")
+    if token != "SKIP":
+        req.add_header("X-SM-Token", token)
+    return urllib.request.urlopen(req)
+
 HERE = os.path.dirname(__file__)
 SPEC = importlib.util.spec_from_file_location(
     "serve_viewer", os.path.join(HERE, "..", "scripts", "serve-viewer.py"))
@@ -85,6 +103,49 @@ class SearchRouteTest(ServerTestBase):
     def test_search_no_match_is_empty(self):
         status, payload = self.get("/search?q=zzzznotfound")
         self.assertEqual(json.loads(payload), [])
+
+
+class CreateTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/")
+        return _token_of(html)
+
+    def test_get_injects_token(self):
+        self.assertTrue(self._token())
+
+    def test_create_without_token_is_403(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "POST", "/api/fact",
+                      {"name": "x", "type": "project", "description": "d", "body": "b", "domain": "mailing"})
+        self.assertEqual(cm.exception.code, 403)
+
+    def test_create_writes_fact_and_index(self):
+        r = write_req(self.port, "POST", "/api/fact",
+                      {"name": "relance", "type": "project", "description": "relance 72h",
+                       "body": "corps", "domain": "mailing"}, token=self._token())
+        self.assertEqual(r.status, 200)
+        self.assertTrue(os.path.isfile(os.path.join(self.vault, "mailing", "relance.md")))
+        self.assertIn("relance", open(os.path.join(self.vault, "index", "mailing.md"), encoding="utf-8").read())
+
+    def test_create_personal_goes_to_root_not_indexed(self):
+        write_req(self.port, "POST", "/api/fact",
+                  {"name": "note-perso", "type": "feedback", "description": "d", "body": "b", "domain": "mailing"},
+                  token=self._token())
+        self.assertTrue(os.path.isfile(os.path.join(self.vault, "note-perso.md")))
+        self.assertFalse(os.path.isfile(os.path.join(self.vault, "mailing", "note-perso.md")))
+
+    def test_create_invalid_slug_is_400(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "POST", "/api/fact",
+                      {"name": "Pas Valide", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
+                      token=self._token())
+        self.assertEqual(cm.exception.code, 400)
+
+    def test_create_duplicate_is_400(self):
+        body = {"name": "audit", "type": "project", "description": "d", "body": "b", "domain": "mailing"}
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            write_req(self.port, "POST", "/api/fact", body, token=self._token())
+        self.assertEqual(cm.exception.code, 400)
 
 
 if __name__ == "__main__":

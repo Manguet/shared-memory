@@ -10,19 +10,92 @@ Bind 127.0.0.1 uniquement.
 import importlib.util
 import json
 import os
+import re
+import secrets
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_SPEC = importlib.util.spec_from_file_location(
-    "build_viewer", os.path.join(_HERE, "build-viewer.py"))
-bv = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(bv)
+
+
+def _load(name, filename):
+    spec = importlib.util.spec_from_file_location(name, os.path.join(_HERE, filename))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+bv = _load("build_viewer", "build-viewer.py")
+reshard = _load("reshard", "reshard.py")
+
+SLUG_RE = re.compile(r"^[a-z0-9-]+$")
+TYPES = {"project", "reference", "user", "feedback"}
+
+
+class ApiError(Exception):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+def _fact_text(name, description, type_, body):
+    return ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n---\n%s\n"
+            % (name, description, type_, body))
+
+
+def _validate(data):
+    name = (data.get("name") or "").strip()
+    typ = (data.get("type") or "").strip()
+    if not SLUG_RE.match(name):
+        raise ApiError(400, "nom invalide (slug attendu : a-z 0-9 -)")
+    if typ not in TYPES:
+        raise ApiError(400, "type invalide")
+    domain = (data.get("domain") or "").strip()
+    if typ in ("user", "feedback"):
+        domain = ""
+    elif domain and not SLUG_RE.match(domain):
+        raise ApiError(400, "domaine invalide (slug attendu)")
+    return name, typ, domain, data.get("description", "") or "", data.get("body", "") or ""
+
+
+def _rel_for(name, domain):
+    return (domain + "/" + name + ".md") if domain else (name + ".md")
+
+
+def _safe_path(vault, rel):
+    vault_real = os.path.realpath(vault)
+    try:
+        full = os.path.realpath(os.path.join(vault, rel))
+    except (ValueError, OSError):
+        raise ApiError(404, "chemin invalide")
+    inside = full == vault_real or full.startswith(vault_real + os.sep)
+    if not rel or not inside or not full.endswith(".md"):
+        raise ApiError(404, "chemin hors vault")
+    return full
+
+
+def _metadata(vault):
+    facts, index_body = bv.collect_facts(vault, include_body=False)
+    return {"facts": facts, "index": index_body, "vault": vault, "count": len(facts)}
+
+
+def create_fact(vault, data):
+    name, typ, domain, desc, body = _validate(data)
+    full = _safe_path(vault, _rel_for(name, domain))
+    if os.path.exists(full):
+        raise ApiError(400, "un fait « %s » existe déjà ici" % name)
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "w", encoding="utf-8") as f:
+        f.write(_fact_text(name, desc, typ, body))
+    reshard.reshard(vault)
+    return _metadata(vault)
 
 
 def make_handler(vault, template):
     vault_real = os.path.realpath(vault)
+    token = secrets.token_hex(16)
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, code, body, ctype="text/plain; charset=utf-8"):
@@ -37,7 +110,8 @@ def make_handler(vault, template):
             u = urlparse(self.path)
             if u.path == "/":
                 facts, index_body = bv.collect_facts(vault, include_body=False)
-                data = {"facts": facts, "index": index_body, "vault": vault, "count": len(facts)}
+                data = {"facts": facts, "index": index_body, "vault": vault,
+                        "count": len(facts), "token": token}
                 html = open(template, encoding="utf-8").read().replace(
                     "/*__DATA__*/", json.dumps(data, ensure_ascii=False))
                 self._send(200, html, "text/html; charset=utf-8")
@@ -64,6 +138,32 @@ def make_handler(vault, template):
                            "application/json; charset=utf-8")
             else:
                 self._send(404, "not found")
+
+        def _json_body(self):
+            n = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(n) if n else b"{}"
+            return json.loads(raw or b"{}")
+
+        def _require_token(self):
+            if self.headers.get("X-SM-Token") != token:
+                raise ApiError(403, "jeton manquant ou invalide")
+
+        def _ok(self, data):
+            self._send(200, json.dumps(data, ensure_ascii=False),
+                       "application/json; charset=utf-8")
+
+        def do_POST(self):
+            u = urlparse(self.path)
+            try:
+                self._require_token()
+                if u.path == "/api/fact":
+                    self._ok(create_fact(vault, self._json_body()))
+                else:
+                    self._send(404, "not found")
+            except ApiError as e:
+                self._send(e.status, e.message)
+            except (ValueError, OSError) as e:
+                self._send(400, "erreur: %s" % e)
 
         def log_message(self, *a):
             pass
