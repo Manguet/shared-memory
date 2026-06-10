@@ -6,8 +6,30 @@ CLI : impression lisible + exit code (1 si manque)."""
 import importlib.util
 import os
 import sys
+import tempfile
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _model_roots():
+    """Dossiers candidats où le modèle d'embeddings peut être caché."""
+    home = os.path.expanduser("~")
+    return [
+        os.path.join(home, ".shared-memory", "models"),         # cache persistant du plugin
+        os.path.join(tempfile.gettempdir(), "fastembed_cache"),  # défaut fastembed (éphémère)
+        os.path.join(home, ".cache", "fastembed"),               # ancien emplacement
+    ]
+
+
+def _has_onnx(roots):
+    """True si un fichier modèle (.onnx) est présent dans l'un des dossiers candidats."""
+    for root in roots:
+        if not os.path.isdir(root):
+            continue
+        for _d, _sub, files in os.walk(root):
+            if any(f.endswith(".onnx") for f in files):
+                return True
+    return False
 
 
 def _default_probes():
@@ -15,8 +37,7 @@ def _default_probes():
         return importlib.util.find_spec("fastembed") is not None
 
     def model_cached():
-        cache = os.path.join(os.path.expanduser("~"), ".cache", "fastembed")
-        return os.path.isdir(cache) and bool(os.listdir(cache))
+        return _has_onnx(_model_roots())
 
     def mcp_json_present():
         return os.path.isfile(os.path.join(_HERE, "..", ".mcp.json"))

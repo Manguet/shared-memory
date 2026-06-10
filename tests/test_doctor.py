@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import tempfile
 import unittest
 
 HERE = os.path.dirname(__file__)
@@ -39,6 +40,19 @@ class DiagnoseTest(unittest.TestCase):
     def test_default_probes_run_without_error(self):
         checks = D.diagnose()
         self.assertTrue(any("fastembed" in c["name"] for c in checks))
+
+
+class ModelCacheProbeTest(unittest.TestCase):
+    def test_has_onnx_detects_model_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            sub = os.path.join(d, "models--x", "snapshots", "abc")
+            os.makedirs(sub)
+            open(os.path.join(sub, "model_optimized.onnx"), "w").close()
+            self.assertTrue(D._has_onnx([d]))
+
+    def test_has_onnx_false_when_absent(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertFalse(D._has_onnx([d, os.path.join(d, "nope")]))
 
 
 if __name__ == "__main__":

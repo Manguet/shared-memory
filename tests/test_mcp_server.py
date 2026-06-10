@@ -69,17 +69,23 @@ class ContextTest(unittest.TestCase):
             self.assertIn("error", ctx)
 
     def test_run_search_grep_fallback_returns_pointers(self):
-        with tempfile.TemporaryDirectory() as d:
-            vault = os.path.join(d, "vault", "mailing")
-            os.makedirs(vault)
-            with open(os.path.join(vault, "a.md"), "w", encoding="utf-8") as f:
-                f.write("---\nname: relance-j3\ndescription: relance paniers 72h\n"
-                        "metadata:\n  type: project\n---\ncorps relance")
-            ctx = {"slug": "-t", "vault": os.path.join(d, "vault")}
-            out = M.run_search(ctx, "relance", 8)
-            files = [r["file"] for r in out["results"]]
-            self.assertIn(os.path.join("mailing", "a.md"), files)
-            self.assertTrue(all("body" not in r for r in out["results"]))
+        orig = M.embed.load_fastembed_embed_fn
+        M.embed.load_fastembed_embed_fn = lambda: None   # force le fallback grep (indép. de fastembed installé)
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                vault = os.path.join(d, "vault", "mailing")
+                os.makedirs(vault)
+                with open(os.path.join(vault, "a.md"), "w", encoding="utf-8") as f:
+                    f.write("---\nname: relance-j3\ndescription: relance paniers 72h\n"
+                            "metadata:\n  type: project\n---\ncorps relance")
+                ctx = {"slug": "-t", "vault": os.path.join(d, "vault")}
+                out = M.run_search(ctx, "relance", 8)
+        finally:
+            M.embed.load_fastembed_embed_fn = orig
+        files = [r["file"] for r in out["results"]]
+        self.assertIn(os.path.join("mailing", "a.md"), files)
+        self.assertTrue(all("body" not in r for r in out["results"]))
+        self.assertTrue(out["vector_inactive"])
 
 
 class McpJsonTest(unittest.TestCase):
@@ -121,6 +127,7 @@ class RobustnessTest(unittest.TestCase):
         M.embed.load_fastembed_embed_fn = lambda: raising
         try:
             with tempfile.TemporaryDirectory() as d:
+                os.environ["SM_EMBEDDINGS_DIR"] = os.path.join(d, "emb")   # store isolé (pas de fuite inter-tests)
                 vd = os.path.join(d, "vault", "mailing")
                 os.makedirs(vd)
                 with open(os.path.join(vd, "a.md"), "w", encoding="utf-8") as f:
@@ -130,6 +137,7 @@ class RobustnessTest(unittest.TestCase):
                 out = M.run_search(ctx, "relance", 8)
         finally:
             M.embed.load_fastembed_embed_fn = orig
+            os.environ.pop("SM_EMBEDDINGS_DIR", None)
         self.assertTrue(out["vector_inactive"])
         self.assertTrue(any(r["file"].endswith("a.md") for r in out["results"]))
 
