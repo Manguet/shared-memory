@@ -46,6 +46,9 @@ sans `gh`. La mémoire canonique ne change que par cette revue
    dans la carte), s'assurer qu'il ne **double pas** un domaine proche existant (`mailing` vs
    `emails`) — sinon demander à l'auteur de **fusionner/renommer**. Valider aussi tout
    **découpage** de domaine proposé (sous-domaines).
+   Les sous-index sont **compacts** (une ligne par fait) et peuvent être **scindés** en
+   `index/<domaine>/<sous>.md` quand ils débordent ~150 lignes : valider que le découpage proposé
+   est cohérent et que les pointeurs restent relatifs à la racine du vault.
 
 4. **Décision** :
    - **Approuver et fusionner** :

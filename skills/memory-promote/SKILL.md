@@ -47,16 +47,19 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    C'est le cœur du skill — ne pas le sauter.
 
 5. **Tenir l'index hiérarchique à jour** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
-   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Vérifier que sa section figure dans le
-   sous-index `index/<domaine>.md` ; ajouter le domaine à la carte `MEMORY.md` s'il est nouveau.
-   **Ne jamais** lister chaque fait dans `MEMORY.md` — la carte ne contient que des domaines.
-   Si un sous-index approche **~150 lignes**, alerter et proposer un découpage (semi-auto).
+   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Vérifier que sa **ligne compacte** figure dans
+   le sous-index `index/<domaine>.md` — `` - `<nom>` — <description> · <type> → `<domaine>/<fait>.md` ``
+   (description reprise du frontmatter, DRY) ; ajouter le domaine à la carte `MEMORY.md` s'il est nouveau.
+   **Ne jamais** lister chaque fait dans `MEMORY.md` — la carte ne contient que des domaines. Si un
+   sous-index approche **~150 lignes**, alerter et proposer un **découpage en sous-domaines**
+   `index/<domaine>/<sous>.md` (semi-auto).
 
 6. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
 
    ```bash
    git -C "<clone>" checkout -b promote/<slug>-<court-descriptif> origin/main
    git -C "<clone>" add <domaine>/<fait>.md index/<domaine>.md MEMORY.md
+   # si le domaine a été scindé : ajouter aussi index/<domaine>/<sous>.md et <domaine>/<sous>/<fait>.md
    git -C "<clone>" commit -m "memory: <résumé>"
    git -C "<clone>" push -u origin HEAD
    ```

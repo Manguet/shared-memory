@@ -23,8 +23,10 @@ visuel `/memory-ui`.
    Si rien n'est renvoyé, demander de lancer `/memory-setup` d'abord.
 
 2. **Sans terme de recherche** : lire la carte `MEMORY.md` (les **domaines**), puis, pour le
-   détail d'un domaine, son sous-index `index/<domaine>.md`. Restituer par domaine → faits. Les
-   faits à la racine (« général ») figurent dans la section « Général » de la carte.
+   détail d'un domaine, son sous-index **compact** `index/<domaine>.md` (une ligne par fait). Si ce
+   sous-index pointe vers des **sous-domaines** (`index/<domaine>/<sous>.md`), suivre le pointeur du
+   sous-domaine pertinent. Restituer par domaine → faits. Les faits à la racine (« général »)
+   figurent dans la section « Général » de la carte.
 
 3. **Avec un terme** : `Grep` **récursif** sur le vault (`.md`, sous-dossiers de domaines inclus)
    pour trouver les faits qui matchent (nom, description, corps), puis lire/résumer les pertinents.
@@ -34,6 +36,9 @@ visuel `/memory-ui`.
 
 ## Points d'attention
 
+- **L'index aiguille, le fait est la source** : le sous-index sert à **trouver** ; toute
+  affirmation (valeur, citation, ligne de code) provient du **fait lu en entier**, pas de la ligne
+  d'index.
 - **Fraîcheur** : les faits sont des observations datées. Avant d'**affirmer** qu'un fait est
   vrai (citation de fichier/ligne, comportement du code), le confronter au code actuel.
 - **Lecture seule** : ce skill n'écrit jamais. Pour ajouter/normaliser : `/memory-import` ;
