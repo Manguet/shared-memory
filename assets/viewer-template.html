@@ -292,7 +292,7 @@ async function api(method, path, body){
 }
 function applyMeta(meta){ DATA.facts = meta.facts; DATA.index = meta.index; DATA.count = meta.count; rebuildNav(); }
 
-function esc(s){ return (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function esc(s){ return (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function md(s){ return esc(s)
   .replace(/^### (.*)$/gm, '<h4>$1</h4>')
   .replace(/`([^`]+)`/g, '<code>$1</code>')

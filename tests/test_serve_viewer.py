@@ -234,5 +234,27 @@ class RenameDomainTest(ServerTestBase):
         self.assertEqual(cm.exception.code, 404)
 
 
+class HardeningTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/"); return _token_of(html)
+
+    def test_description_newline_is_flattened(self):
+        write_req(self.port, "POST", "/api/fact",
+                  {"name": "nl", "type": "project", "description": "ligne1\nligne2", "body": "corps", "domain": "mailing"},
+                  token=self._token())
+        fm = open(os.path.join(self.vault, "mailing", "nl.md"), encoding="utf-8").read().split("---")[1]
+        self.assertIn("description: ligne1 ligne2", fm)
+        self.assertNotIn("ligne1\nligne2", fm)
+
+    def test_rename_domain_preserves_prose(self):
+        with open(os.path.join(self.vault, "MEMORY.md"), "w", encoding="utf-8") as f:
+            f.write("# Carte\n\n## Domaines\n- **mailing** (1) → `index/mailing.md`\n\n"
+                    "## Notes\n- La stratégie **mailing** est centrale.\n")
+        write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "emailing"}, token=self._token())
+        mem = open(os.path.join(self.vault, "MEMORY.md"), encoding="utf-8").read()
+        self.assertIn("`index/emailing.md`", mem)
+        self.assertIn("La stratégie **mailing** est centrale.", mem)
+
+
 if __name__ == "__main__":
     unittest.main()

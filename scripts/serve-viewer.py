@@ -57,7 +57,8 @@ def _validate(data):
         domain = ""
     elif domain and not SLUG_RE.match(domain):
         raise ApiError(400, "domaine invalide (slug attendu)")
-    return name, typ, domain, data.get("description", "") or "", data.get("body", "") or ""
+    desc = (data.get("description") or "").replace("\r", " ").replace("\n", " ").strip()
+    return name, typ, domain, desc, data.get("body", "") or ""
 
 
 def _rel_for(name, domain):
@@ -132,11 +133,14 @@ def _patch_memory_domain(vault, old, new):
     path = os.path.join(vault, "MEMORY.md")
     if not os.path.isfile(path):
         return
-    txt = open(path, encoding="utf-8").read()
-    txt = txt.replace("index/%s.md" % old, "index/%s.md" % new)
-    txt = txt.replace("**%s**" % old, "**%s**" % new)
+    ptr_old, ptr_new = "index/%s.md" % old, "index/%s.md" % new
+    out = []
+    for line in open(path, encoding="utf-8").read().splitlines(keepends=True):
+        if ptr_old in line:                      # ligne de domaine : patch pointeur + libellé en gras
+            line = line.replace(ptr_old, ptr_new).replace("**%s**" % old, "**%s**" % new)
+        out.append(line)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(txt)
+        f.write("".join(out))
 
 
 def rename_domain(vault, old, new):
@@ -205,7 +209,7 @@ def make_handler(vault, template):
             return json.loads(raw or b"{}")
 
         def _require_token(self):
-            if self.headers.get("X-SM-Token") != token:
+            if not secrets.compare_digest(self.headers.get("X-SM-Token") or "", token):
                 raise ApiError(403, "jeton manquant ou invalide")
 
         def _ok(self, data):
