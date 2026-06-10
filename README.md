@@ -44,6 +44,7 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 | `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, pousse une branche de proposition |
 | `/memory-review` | relire et fusionner les branches de proposition (git seul) |
 | `/memory-ui` | ouvre un viewer HTML autonome (lecture seule) du vault dans le navigateur |
+| `/memory-doctor` | diagnostiquer la recherche mémoire (`search_memory`) et proposer les installs (fastembed) |
 
 ## Démarrage
 
@@ -66,6 +67,7 @@ shared-memory/
 ├── .claude-plugin/
 │   ├── plugin.json
 │   └── marketplace.json
+├── .mcp.json            # déclare le serveur MCP (search_memory)
 ├── skills/
 │   ├── memory-setup/   (SKILL.md + references/)
 │   ├── memory-list/    (SKILL.md)
