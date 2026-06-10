@@ -77,3 +77,24 @@ for p in reg.get("projets", []):
         break
 PY
 }
+
+# Compte les faits .md partageables modifiés/ajoutés/supprimés dans la working copy d'un clone,
+# hors MEMORY.md, index/**, et faits perso (feedback_* ou frontmatter type: user|feedback).
+# Renvoie un entier sur stdout. Best-effort : 0 si le clone n'est pas un dépôt git.
+sm_count_unpromoted() {
+  local clone="$1" n=0 path type
+  [ -d "$clone" ] || { printf '0'; return 0; }
+  while IFS= read -r line; do
+    path="${line:3}"                          # 'XY <path>'
+    case "$path" in *" -> "*) path="${path##* -> }" ;; esac   # renommage -> cible
+    case "$path" in *.md) ;; *) continue ;; esac
+    case "$path" in
+      MEMORY.md|index/*) continue ;;
+      feedback_*|*/feedback_*) continue ;;
+    esac
+    type="$(sed -n 's/^[[:space:]]*type:[[:space:]]*//p' "$clone/$path" 2>/dev/null | head -1)"
+    case "$type" in user|feedback) continue ;; esac
+    n=$((n + 1))
+  done < <(git -C "$clone" status --porcelain 2>/dev/null)
+  printf '%s' "$n"
+}
