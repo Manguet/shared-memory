@@ -121,6 +121,11 @@ C'est tout. À partir de là, la mémoire de ce projet est partagée. Les comman
 | `/memory-review` | relire / fusionner les propositions (git) |
 | `/memory-doctor` | diagnostiquer la recherche sémantique, proposer `fastembed` |
 
+> **Automatique (hooks de session)** : à chaque démarrage de session, le plugin récupère les
+> derniers faits de l'équipe (`git pull` best-effort) et te rappelle tes faits locaux non encore
+> partagés — pense à `/memory-promote` **avant de fermer** pour éviter les décalages. Rien à
+> lancer à la main.
+
 ---
 
 ## Tester en local (sans rien publier)

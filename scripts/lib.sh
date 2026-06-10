@@ -77,3 +77,27 @@ for p in reg.get("projets", []):
         break
 PY
 }
+
+# Compte les faits .md partageables modifiés/ajoutés/supprimés dans la working copy d'un clone
+# (modifs NON COMMITÉES = brouillons étage 1), hors MEMORY.md, index/**, et faits perso
+# (feedback_* ou frontmatter type: user|feedback). Renvoie un entier sur stdout. Best-effort : 0 si
+# pas un dépôt git. Utilise `status --porcelain -z` (NUL-séparé, SANS quoting) pour gérer
+# correctement les noms accentués / avec espaces / les renommages.
+sm_count_unpromoted() {
+  local clone="$1" n=0 rec st path type _old
+  [ -d "$clone" ] || { printf '0'; return 0; }
+  while IFS= read -r -d '' rec; do
+    st="${rec:0:2}"
+    path="${rec:3}"
+    case "$st" in R*|C*|*R*|*C*) IFS= read -r -d '' _old ;; esac   # renommage/copie : consomme l'ancien chemin
+    case "$path" in *.md) ;; *) continue ;; esac
+    case "$path" in
+      MEMORY.md|index/*) continue ;;
+      feedback_*|*/feedback_*) continue ;;
+    esac
+    type="$(sed -n 's/^[[:space:]]*type:[[:space:]]*//p' "$clone/$path" 2>/dev/null | head -1)"
+    case "$type" in user|feedback) continue ;; esac
+    n=$((n + 1))
+  done < <(git -C "$clone" status --porcelain -z 2>/dev/null)
+  printf '%s' "$n"
+}
