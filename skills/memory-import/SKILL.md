@@ -41,12 +41,19 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
    - `metadata.type` : `project` ou `reference` (jamais `user`/`feedback` ici) ;
    - corps concis, liens `[[autre-slug]]` vers les faits connexes.
 
-6. **Mettre à jour le sous-index** `index/<domaine>.md` : ajouter **une ligne compacte** pour le
-   fait — `` - `<nom>` — <description> · <type> → `<domaine>/<fait>.md` `` (reprendre **telle quelle**
-   la `description` du frontmatter, DRY) ; le créer s'il n'existe pas. Si le domaine est **nouveau**,
-   ajouter sa ligne dans la carte `MEMORY.md` (section « Domaines »). Si le sous-index approche
-   **~150 lignes**, **alerter** et proposer un **découpage en sous-domaines** `index/<domaine>/<sous>.md`
-   (semi-auto). Format détaillé : `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`.
+6. **Régénérer l'index via reshard** (au lieu d'écrire la ligne à la main). Compter d'abord les
+   faits du domaine ; s'il **dépasse ~150 faits**, **prévenir l'utilisateur** qu'un découpage en
+   sous-domaines (déplacement de faits) va avoir lieu et **demander son accord**. Puis lancer :
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<clone>"
+   ```
+
+   reshard reconstruit `index/**` au format compact (description reprise du frontmatter, DRY) et
+   **préserve la carte `MEMORY.md`** (curée à la main). Si le fait crée un **nouveau domaine**,
+   ajouter sa ligne à la section « Domaines » de `MEMORY.md` **à la main** (reshard n'y touche pas).
+   Si reshard a créé des sous-domaines `part-xx`, le **signaler** (l'utilisateur pourra les
+   renommer). Détails : `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`.
 
 7. **Régénérer le viewer** (pour qu'une vue déjà ouverte se mette à jour au rechargement de l'onglet) :
 
@@ -76,3 +83,5 @@ Terminer en disant mot pour mot : « Pour proposer ces faits à l'équipe, lance
 - **`${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`** — structure shardée, sous-index, seuil.
 - **`${CLAUDE_PLUGIN_ROOT}/assets/fact-template.md`** — gabarit d'un fait.
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh`** — helpers de localisation du vault.
+- **`${CLAUDE_PLUGIN_ROOT}/scripts/reshard.py`** — régénère les index compacts et découpe les
+  domaines trop gros en sous-domaines.

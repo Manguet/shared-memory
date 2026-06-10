@@ -46,20 +46,23 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    périmés/contradictoires, et résumer à l'utilisateur ce qui est gardé, corrigé, écarté.
    C'est le cœur du skill — ne pas le sauter.
 
-5. **Tenir l'index hiérarchique à jour** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
-   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Vérifier que sa **ligne compacte** figure dans
-   le sous-index `index/<domaine>.md` — `` - `<nom>` — <description> · <type> → `<domaine>/<fait>.md` ``
-   (description reprise du frontmatter, DRY) ; ajouter le domaine à la carte `MEMORY.md` s'il est nouveau.
-   **Ne jamais** lister chaque fait dans `MEMORY.md` — la carte ne contient que des domaines. Si un
-   sous-index approche **~150 lignes**, alerter et proposer un **découpage en sous-domaines**
-   `index/<domaine>/<sous>.md` (semi-auto).
+5. **Régénérer l'index hiérarchique via reshard** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
+   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Lancer :
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<clone>"
+   ```
+
+   reshard régénère `index/**` (lignes compactes) et **découpe en sous-domaines** tout domaine
+   dépassant ~150 faits (déplacement de faits). Il **préserve la carte `MEMORY.md`** curée ; si un
+   **nouveau domaine** apparaît, ajouter sa ligne à `MEMORY.md` à la main. Si un découpage a lieu,
+   le **signaler** dans le résumé de proposition.
 
 6. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
 
    ```bash
    git -C "<clone>" checkout -b promote/<slug>-<court-descriptif> origin/main
-   git -C "<clone>" add <domaine>/<fait>.md index/<domaine>.md MEMORY.md
-   # si le domaine a été scindé : ajouter aussi index/<domaine>/<sous>.md et <domaine>/<sous>/<fait>.md
+   git -C "<clone>" add -A     # faits (déplacés en sous-domaines compris), index/**, MEMORY.md
    git -C "<clone>" commit -m "memory: <résumé>"
    git -C "<clone>" push -u origin HEAD
    ```
