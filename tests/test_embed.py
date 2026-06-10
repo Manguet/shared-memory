@@ -61,5 +61,26 @@ class StoreFreshnessTest(unittest.TestCase):
         self.assertEqual(E.load_store("/no/such/store.json"), {})
 
 
+class CosineTopkTest(unittest.TestCase):
+    def test_cosine_identical_is_one(self):
+        self.assertAlmostEqual(E.cosine([1.0, 2.0, 3.0], [1.0, 2.0, 3.0]), 1.0, places=6)
+
+    def test_cosine_orthogonal_is_zero(self):
+        self.assertAlmostEqual(E.cosine([1.0, 0.0], [0.0, 1.0]), 0.0, places=6)
+
+    def test_cosine_zero_vector_is_zero(self):
+        self.assertEqual(E.cosine([0.0, 0.0], [1.0, 1.0]), 0.0)
+
+    def test_topk_orders_by_score_and_limits(self):
+        store = {
+            "a": {"vec": [1.0, 0.0]},
+            "b": {"vec": [0.9, 0.1]},
+            "c": {"vec": [0.0, 1.0]},
+        }
+        top = E.semantic_topk([1.0, 0.0], store, k=2)
+        self.assertEqual([f for f, _ in top], ["a", "b"])
+        self.assertEqual(len(top), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -53,3 +53,18 @@ def refresh_store(facts, store, embed_fn):
         for (file, h), vec in zip(keys, vecs):
             fresh[file] = {"hash": h, "vec": [float(x) for x in vec]}
     return fresh
+
+
+def cosine(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    return 0.0 if na == 0 or nb == 0 else dot / (na * nb)
+
+
+def semantic_topk(query_vec, store, k):
+    """Top-k (file, score) par cosine décroissant."""
+    scored = [(file, cosine(query_vec, rec["vec"]))
+              for file, rec in store.items() if "vec" in rec]
+    scored.sort(key=lambda t: t[1], reverse=True)
+    return scored[:k]
