@@ -112,5 +112,69 @@ class ReshardCoreTest(unittest.TestCase):
             self.assertIn("- ui (1 faits) → index/ui.md", mem)
 
 
+def index_files_under(vault):
+    return md_files_under(os.path.join(vault, "index"))
+
+
+def index_depth(vault):
+    idx = os.path.join(vault, "index")
+    return max(len(os.path.relpath(f, idx).split(os.sep)) for f in index_files_under(vault))
+
+
+def leaf_pointer_targets(vault):
+    targets = []
+    for f in index_files_under(vault):
+        for line in open(f, encoding="utf-8").read().splitlines():
+            if line.startswith("- `"):                  # ligne de fait (feuille)
+                targets.append(line.split("→")[1].strip().strip("`"))
+    return targets
+
+
+class ReshardRecursionTest(unittest.TestCase):
+    def test_two_levels_when_exceeds_n_squared(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(5):                            # 5 > 2*2 => 2 niveaux à n=2
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=2)
+            self.assertGreaterEqual(index_depth(v), 3)    # index/mailing/part-xx/part-yy.md
+            self.assertEqual(_leaf_count(v), 5)
+
+    def test_each_fact_reachable_by_exactly_one_leaf_pointer(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(7):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=2)
+            targets = leaf_pointer_targets(v)
+            actual = sorted(os.path.relpath(p, v) for p in md_files_under(os.path.join(v, "mailing")))
+            self.assertEqual(sorted(targets), actual)     # bijection pointeurs <-> faits
+            self.assertEqual(len(targets), len(set(targets)))
+
+    def test_every_index_within_threshold(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(30):
+                write_fact(v, "mailing/f%02d.md" % i, "f%02d" % i)
+            R.reshard(v, max_entries=4)
+            for f in index_files_under(v):
+                entries = [l for l in open(f, encoding="utf-8").read().splitlines()
+                           if l.startswith("- ")]
+                self.assertLessEqual(len(entries), 4)
+
+    def test_idempotent(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(9):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=2)
+            snap1 = {os.path.relpath(f, v): open(f, encoding="utf-8").read()
+                     for f in index_files_under(v)}
+            R.reshard(v, max_entries=2)
+            snap2 = {os.path.relpath(f, v): open(f, encoding="utf-8").read()
+                     for f in index_files_under(v)}
+            self.assertEqual(snap1, snap2)
+
+
+def _leaf_count(v):
+    return len(md_files_under(os.path.join(v, "mailing")))
+
+
 if __name__ == "__main__":
     unittest.main()
