@@ -94,6 +94,9 @@
   .group > summary::-webkit-details-marker { display: none; }
   .group > summary:hover { color: var(--text); }
   .group > summary .gcount { margin-left: auto; color: var(--faint); }
+  .group > summary .grename { color: var(--faint); opacity: 0; margin-left: 6px; cursor: pointer; transition: opacity .12s; }
+  .group > summary:hover .grename { opacity: 1; }
+  .group > summary .grename:hover { color: var(--coral); }
   .group > summary .gdot { width: 8px; height: 8px; border-radius: 2px; }
   .navitem {
     display: block; width: 100%; text-align: left; padding: 6px 10px 6px 22px; border: 0;
@@ -346,7 +349,12 @@ function navNode(node, label, depth){
   depth = depth || 0;
   const g = document.createElement('details'); g.className = 'group'; g.open = false;
   g.style.setProperty('--d', depth);
-  g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(label)}<span class="gcount">${node.count}</span></summary>`;
+  const pencil = depth === 0 ? `<span class="grename" title="renommer le domaine">✎</span>` : '';
+  g.innerHTML = `<summary><span class="gdot" style="background:var(--coral)"></span>${esc(label)}<span class="gcount">${node.count}</span>${pencil}</summary>`;
+  if(depth === 0){
+    const p = g.querySelector('.grename');
+    p.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); renameDomain(label); };
+  }
   let filled = false;
   g.addEventListener('toggle', () => {            // lazy : rendu des enfants à l'ouverture
     if(g.open && !filled){
@@ -399,6 +407,13 @@ function showFact(f){
     };
   };
 }
+async function renameDomain(old){
+  const nw = prompt('Renommer le domaine « ' + old +' » en :', old);
+  if(!nw || nw === old) return;
+  try { const meta = await api('POST', '/api/rename-domain', { old, new: nw.trim() }); applyMeta(meta); update(); }
+  catch(e){ alert('Renommage refusé : ' + (e.message||e)); }
+}
+
 function editFact(f){
   const raw = ($('fbody') && $('fbody').dataset.raw) || '';
   const body = raw.replace(/^---[\s\S]*?---\n?/, '');
