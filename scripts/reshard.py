@@ -140,3 +140,17 @@ def reshard(vault, max_entries=DEFAULT_MAX):
         _write_index(vault, seg, kind, entries)
     _write_memory(vault, counts)
     return counts
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Redécoupe un vault en sous-domaines (≤ N par dossier).")
+    ap.add_argument("vault")
+    ap.add_argument("--max-entries", type=int, default=DEFAULT_MAX)
+    args = ap.parse_args()
+    counts = reshard(args.vault, args.max_entries)
+    total = sum(counts.values())
+    print("reshard: %d domaines, %d faits, seuil %d" % (len(counts), total, args.max_entries))
+
+
+if __name__ == "__main__":
+    main()

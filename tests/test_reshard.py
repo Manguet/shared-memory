@@ -176,5 +176,25 @@ def _leaf_count(v):
     return len(md_files_under(os.path.join(v, "mailing")))
 
 
+import subprocess
+import sys
+
+RESHARD_PY = os.path.join(HERE, "..", "scripts", "reshard.py")
+
+
+class CliTest(unittest.TestCase):
+    def test_cli_reshards_with_max_entries(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(4):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            r = subprocess.run([sys.executable, RESHARD_PY, v, "--max-entries", "2"],
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            mailing = os.path.join(v, "mailing")
+            subdirs = [e for e in os.listdir(mailing)
+                       if os.path.isdir(os.path.join(mailing, e))]
+            self.assertTrue(len(subdirs) >= 2)
+
+
 if __name__ == "__main__":
     unittest.main()
