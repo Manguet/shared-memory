@@ -42,6 +42,16 @@ complet (deux étages, multi-vault, gouvernance par revue de branche git).
    et que le registre est à jour. Si une sauvegarde `memory.local-backup-*` a été créée,
    prévenir que ses faits utiles devront être promus via `/memory-promote`.
 
+5. **Annoncer d'emblée les prérequis de recherche.** Lancer le doctor pour signaler tout de
+   suite ce qui manque (sans rien installer) :
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/doctor.py
+   ```
+
+   Si fastembed manque, l'indiquer : `search_memory` tournera en **fallback grep** en attendant,
+   et `/memory-doctor` propose d'activer la recherche sémantique (`pip install fastembed`).
+
 ## Points d'attention
 
 - **Ne jamais détruire une mémoire locale existante** : le script la déplace en sauvegarde.
@@ -62,3 +72,5 @@ Donner les commandes mot pour mot — c'est ce qui guide les non-devs.
 - **`references/concepts.md`** — modèle architectural (étages, multi-vault, gouvernance).
 - **`references/vaults.md`** — catalogue des vaults disponibles (à compléter par l'équipe).
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/setup-vault.sh`** — clone + symlink + registre.
+- **`${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py`** — diagnostic des prérequis de `search_memory`
+  (lancé en fin de configuration ; détail via `/memory-doctor`).
