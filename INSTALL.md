@@ -14,6 +14,7 @@ sur sa machine.
 - **Claude Code** (déjà installé si tu l'utilises pour coder).
 - **git**, **python3**.
 - Un **compte GitHub** : le plugin est **public** (clone sans auth), mais l'accès au **vault privé** de l'équipe est requis pour `/memory-setup`. Auth : clé SSH ajoutée à GitHub, ou token HTTPS (voir §B.1).
+- **Optionnel** : `fastembed` (`pip install fastembed`) pour la **recherche sémantique** de `search_memory` ; sans lui, repli automatique sur grep. `/memory-doctor` le diagnostique et propose l'install.
 
 Vérifie tout d'un coup :
 
@@ -118,6 +119,7 @@ C'est tout. À partir de là, la mémoire de ce projet est partagée. Les comman
 | `/memory-import` | ajouter de la doc / un fait |
 | `/memory-promote` | proposer ses faits à l'équipe (pousse une branche) |
 | `/memory-review` | relire / fusionner les propositions (git) |
+| `/memory-doctor` | diagnostiquer la recherche sémantique, proposer `fastembed` |
 
 ---
 
@@ -133,8 +135,10 @@ claude --plugin-dir /var/www/shared-memory
 ## Dépannage
 
 - **« Vault introuvable » à `/memory-ui`** → lancer `/memory-setup` d'abord.
-- **Le navigateur ne s'ouvre pas tout seul (WSL2)** → cliquer le lien `file://…` affiché par
-  `/memory-ui` (toujours affiché et cliquable).
+- **Le navigateur ne s'ouvre pas tout seul (WSL2)** → cliquer le lien `http://localhost:…` affiché
+  par `/memory-ui` (le viewer est servi par un petit serveur local en lecture seule).
+- **`search_memory` indique « recherche sémantique inactive » (repli grep)** → `fastembed` n'est pas
+  installé ; lancer `/memory-doctor`, qui propose `pip install fastembed`.
 - **`git clone` du vault refusé** → accès non accordé au repo privé, ou auth git absente
   (clé SSH ajoutée à GitHub, ou token HTTPS).
 - **`~/.claude/projects/<slug>/` n'existe pas** → le projet n'a jamais été ouvert dans Claude
