@@ -67,5 +67,55 @@ class RegistryFnTest(unittest.TestCase):
         call(missing, "sm_unregister", "-a")   # ne doit pas planter
 
 
+class UnlinkVaultTest(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.d = self._t.name
+        self.reg = os.path.join(self.d, "registry.json")
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def _run(self, project_dir):
+        env = dict(os.environ, SM_REGISTRY=self.reg)
+        return subprocess.run(["bash", UNLINK, project_dir],
+                              capture_output=True, text=True, env=env)
+
+    def test_removes_symlink_and_entry_keeps_clone(self):
+        clone = os.path.join(self.d, "clone")
+        os.makedirs(clone)
+        sym = os.path.join(self.d, "memlink")
+        os.symlink(clone, sym)
+        slug = slug_of("/tmp/projX")
+        with open(self.reg, "w") as f:
+            json.dump({"projets": [{"slug": slug, "symlink": sym, "clone": clone}]}, f)
+        r = self._run("/tmp/projX")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertFalse(os.path.lexists(sym))        # symlink retiré
+        self.assertTrue(os.path.isdir(clone))          # clone conservé
+        with open(self.reg) as f:
+            self.assertEqual(json.load(f)["projets"], [])   # entrée retirée
+
+    def test_does_not_delete_real_dir(self):
+        clone = os.path.join(self.d, "clone")
+        os.makedirs(clone)
+        realdir = os.path.join(self.d, "realmem")       # vrai dossier, PAS un symlink
+        os.makedirs(realdir)
+        slug = slug_of("/tmp/projY")
+        with open(self.reg, "w") as f:
+            json.dump({"projets": [{"slug": slug, "symlink": realdir, "clone": clone}]}, f)
+        r = self._run("/tmp/projY")
+        self.assertEqual(r.returncode, 0)
+        self.assertTrue(os.path.isdir(realdir))         # vrai dossier NON supprimé
+        self.assertIn("vrai dossier", r.stdout)
+
+    def test_not_branched_is_noop(self):
+        with open(self.reg, "w") as f:
+            json.dump({"projets": []}, f)
+        r = self._run("/tmp/projZ")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("non branché", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
