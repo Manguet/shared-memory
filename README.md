@@ -2,97 +2,163 @@
 
 [![tests](https://github.com/Manguet/shared-memory/actions/workflows/tests.yml/badge.svg)](https://github.com/Manguet/shared-memory/actions/workflows/tests.yml)
 
-Plugin Claude Code de **mémoire d'équipe partagée par projet**.
+> **Une mémoire d'équipe partagée par projet, pour Claude Code.**
+> Ce que tu apprends à Claude ne reste plus prisonnier de ta machine : toute l'équipe — devs **et**
+> vibe coders — partage **une seule source de vérité** par projet, sans application séparée.
 
-Branche la mémoire native de Claude Code (`~/.claude/projects/<slug>/memory/`, locale et non
-partagée) sur un **vault git privé** (un par équipe) : devs **et** vibe coders partagent
-**une seule source de vérité** par projet — consulter, contribuer, valider par revue de branche git — sans
-application séparée.
+---
 
-## Idée en une phrase
+## Le problème
 
-Mémoire native = fichiers `.md` locaux → symlink vers un **vault git** géré par le plugin.
-Mémoire **shardée par domaine** (carte `MEMORY.md` + sous-index compacts), **recherche sémantique**
-optionnelle (outil MCP `search_memory`, repli grep), **viewer web local** (lecture + **CRUD local**
-des faits, étage 1), et **gouvernance par revue de branche git**.
+La mémoire native de Claude Code vit dans `~/.claude/projects/<slug>/memory/` : **locale à chaque
+machine**, hors du dépôt, **jamais synchronisée**. Chaque Claude construit son savoir en silo. Les
+décisions, conventions et chantiers découverts ne circulent pas dans l'équipe.
 
-## Distinction essentielle
+**`shared-memory`** branche cette mémoire native, par un simple **symlink**, sur un **vault git
+privé** (un par équipe). Dès lors, lire et écrire de la mémoire passe par une source commune,
+gouvernée par revue de branche git — le tout **dans Claude Code**, que tout le monde a déjà.
+
+## Comment ça marche
+
+```mermaid
+flowchart LR
+  PLUGIN["Plugin shared-memory<br/>(public, aucun secret)"] -. installé une fois .-> CC
+  subgraph poste["Poste de chaque membre"]
+    CC["Claude Code<br/>skills /memory-*"] --> MEM["~/.claude/projects/&lt;slug&gt;/memory"]
+    MEM -. symlink .-> CLONE["clone local du vault"]
+  end
+  CLONE <-->|git pull / push validé| VAULT[("Vault git privé<br/>un par projet — privé à l'équipe")]
+```
 
 | Repo | Contenu | Visibilité |
 |------|---------|------------|
 | **plugin** (ce repo) | l'outil : skills, viewer, scripts | **public** (aucun secret) |
-| **vault** (un par équipe) | la mémoire : `MEMORY.md` + faits `.md` | privé à l'équipe |
+| **vault** (un par équipe) | la mémoire : `MEMORY.md` + faits `.md` | **privé** à l'équipe |
+
+La mémoire reste de simples **fichiers `.md`** (frontmatter + corps + liens `[[wikilink]]`) — c'est
+ce qui rend le partage possible : **git** fait la synchro, l'historique et les conflits ; on ne
+réécrit aucun outil de sync.
+
+## La boucle de gouvernance (deux étages)
+
+Rien ne devient « officiel » sans une **revue par un référent** — la garantie qualité, surtout avec
+des contributeurs nombreux.
+
+```mermaid
+flowchart TD
+  A["Claude / humain écrit un fait<br/>(import · CRUD viewer · seed)"] --> B["Étage 1 — brouillon LOCAL<br/>working copy, non poussé"]
+  B -->|/memory-promote| C["branche promote/*<br/>poussée sur le vault"]
+  C -->|/memory-review<br/>par un référent ≠ auteur| D["Étage 2 — CANONIQUE<br/>main du vault, partagé"]
+  D -->|git pull au démarrage de session<br/>hook SessionStart| A
+```
+
+- **Étage 1 — local** : Claude (et toi) écrivez librement, sans friction. Les faits perso
+  (`type: user`/`feedback`) restent locaux, jamais partagés.
+- **Étage 2 — canonique** : seul un **référent** fusionne dans `main` (`/memory-review`). La
+  promotion est explicite (`/memory-promote`), jamais automatique.
+
+## Les fonctionnalités
+
+### Skills (à lancer dans Claude Code)
+
+| Skill | Rôle |
+|-------|------|
+| `/memory-setup` | branche le projet sur le vault (clone + symlink + registre) |
+| `/memory-seed` | **amorce** un vault vide depuis tes sources (CLAUDE.md, doc) → brouillons |
+| `/memory-import` | normalise un doc brut en **faits atomiques** (+ dédup) |
+| `/memory-list` | consulter / chercher dans la mémoire (conversationnel) |
+| `/memory-ui` | **viewer web** local : explorer + **CRUD** des faits (créer/éditer/supprimer/déplacer) |
+| `/memory-promote` | proposer ses faits à l'équipe (vérifie le code, pousse une branche) |
+| `/memory-review` | relire et fusionner les propositions (git seul) |
+| `/memory-doctor` | diagnostiquer la recherche sémantique et proposer les installs |
+
+### Sous le capot
+
+- **🔎 Recherche sémantique** — l'outil MCP **`search_memory`** (vectoriel local via *fastembed*,
+  **repli grep** si absent) renvoie des **pointeurs** de faits, jamais le contenu : *l'index aiguille,
+  le fait est la source*. Claude relit le fait avant d'affirmer.
+- **🗂️ Sharding par domaine** — la carte `MEMORY.md` (chargée au démarrage) ne liste que des
+  **domaines** ; les faits sont rangés par domaine avec des **sous-index compacts** lus à la demande
+  → coût tokens de démarrage **borné** quelle que soit la taille. `reshard.py` redécoupe
+  récursivement un domaine trop gros en sous-domaines (prouvé à **9 300 faits**).
+- **🖥️ Viewer + CRUD local** — un mini-serveur local (`http://localhost`, lecture seule du contenu,
+  **écriture en brouillon étage 1**) : arbre N-niveaux, recherche hybride, créer/éditer/supprimer un
+  fait, renommer un domaine — sans jamais toucher au canonique.
+- **🔄 Boucle vivante (hooks)** — au **démarrage de session**, synchro automatique du vault + rappel
+  des faits non promus ; **rappel en fin de session**. Best-effort, jamais bloquant.
+- **🕐 Fraîcheur** — chaque fait porte une date `reviewed` ; le viewer signale les faits **périmés**
+  (≥ 90 j ou jamais vérifiés) → la confiance ne s'érode pas en silence.
+- **🧬 Dédup sémantique** — à la création, un fait trop proche d'un existant (cosine ≥ 0.80) est
+  **signalé** : on met à jour plutôt qu'empiler un doublon.
+- **🔒 Sûreté** — faits perso `gitignore`és (jamais poussés), serveur lié à `127.0.0.1` + jeton
+  same-origin, validation anti-traversal, CI sur chaque push.
+
+## Recherche & rappel — comment un fait remonte
+
+```mermaid
+flowchart LR
+  Q["Sujet en cours"] --> MAP["MEMORY.md<br/>carte des domaines<br/>(chargée au démarrage)"]
+  Q --> SM["search_memory (MCP)<br/>vectoriel local · repli grep"]
+  MAP --> IDX["index/&lt;domaine&gt;.md<br/>(sous-index compact)"]
+  IDX --> FACT["&lt;domaine&gt;/&lt;fait&gt;.md<br/><b>la source</b>"]
+  SM -->|pointeurs| FACT
+```
 
 ## Installation
 
 **Guide complet pas-à-pas (devs + non-devs)** : [`INSTALL.md`](INSTALL.md).
 
-Le repo plugin est **public** (l'outil ne contient aucun secret). Installation par script,
-**locale**, sans publication dans aucun catalogue :
+Le repo plugin est **public** (aucun secret). Installation par script, **locale**, sans publication
+dans aucun catalogue :
 
-```
+```bash
 curl -fsSL https://raw.githubusercontent.com/Manguet/shared-memory/main/install.sh | bash
 ```
 
-Le script vérifie les prérequis, clone le plugin dans `~/.shared-memory/plugin`, et affiche
-les commandes `/plugin` à coller dans Claude Code (ajout par **chemin local**, puis `/reload-plugins`). Vérifier
-seulement les prérequis : `bash scripts/doctor.sh`.
-
-## Skills
-
-| Skill | Rôle |
-|-------|------|
-| `/memory-setup` | clone le vault du projet + crée le symlink + écrit le registre local |
-| `/memory-list` | consulter / chercher dans la mémoire (conversationnel) |
-| `/memory-import` | normaliser un doc brut en faits mémoire (working copy) |
-| `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, pousse une branche de proposition |
-| `/memory-review` | relire et fusionner les branches de proposition (git seul) |
-| `/memory-ui` | ouvre un viewer web local du vault (lecture + **CRUD local** des faits : créer/éditer/supprimer/déplacer, renommer un domaine — écriture en brouillon local, partage via `/memory-promote`) |
-| `/memory-seed` | amorcer un vault vide depuis les sources existantes (CLAUDE.md, doc) — brouillons |
-| `/memory-doctor` | diagnostiquer la recherche mémoire (`search_memory`) et proposer les installs (fastembed) |
-
-## Recherche & passage à l'échelle
-
-- **Sharding par domaine** : la carte `MEMORY.md` (chargée au démarrage) ne liste que des domaines ; chaque domaine a un **sous-index compact** `index/<domaine>.md` (1 ligne/fait), lu à la demande → coût tokens de démarrage borné quelle que soit la taille.
-- **`search_memory` (MCP)** : outil que Claude appelle en session ; **recherche vectorielle locale** (fastembed, optionnel) avec **repli grep** si absent. Renvoie des **pointeurs** de faits (jamais le contenu) — *l'index aiguille, le fait est la source*.
-- **`reshard.py`** : redécoupe récursivement un domaine trop gros en sous-domaines (`part-xx`) pour qu'aucun index ne dépasse ~150 lignes ; **préserve** la carte `MEMORY.md` curée.
-- **`/memory-doctor`** : diagnostique les prérequis de la recherche (fastembed, modèle) et propose les installs — pas de dégradation silencieuse.
-- **Boucle vivante (hooks)** : au **démarrage de session**, le plugin **synchronise** le vault (`git pull --ff-only`, best-effort) et **rappelle** les faits locaux non promus (« prévois `/memory-promote` avant de fermer ») ; un rappel **en fin de session** clôt la boucle. Tout est silencieux si le projet n'est pas branché.
-- **Fraîcheur** : chaque fait porte une date `reviewed` (vérifié le…) ; le viewer signale les faits **périmés** (≥ 90 j ou jamais vérifiés) via un badge et une vue « à revérifier » → la confiance ne s'érode pas en silence.
-- **Dédup sémantique** : à la création (import / CRUD), un fait trop proche d'un existant (cosine ≥ 0.80) est **signalé** → on met à jour plutôt qu'empiler un doublon (fastembed optionnel).
+Le script vérifie les prérequis, clone le plugin dans `~/.shared-memory/plugin`, et affiche les
+commandes `/plugin` à coller dans Claude Code (ajout par **chemin local**, puis `/reload-plugins`).
 
 ## Démarrage
 
-```
+```bash
 # Dans un projet déjà ouvert dans Claude Code :
-/memory-setup git@github.com:<org>/<projet>-memory.git
-/memory-ui            # visualiser
+/memory-setup git@github.com:<org>/<projet>-memory.git   # brancher le vault
+/memory-seed                                             # amorcer depuis CLAUDE.md + doc
+/memory-ui                                               # explorer / gérer les faits
 # … travail … puis en fin de session :
-/memory-promote       # proposer ses faits (branche git)
+/memory-promote                                          # proposer ses faits (branche git)
 ```
 
 ## Prérequis
 
 - `git` authentifié (accès au vault privé), `python3`.
-- **Optionnel** : `fastembed` (`pip install fastembed`) pour la recherche sémantique de `search_memory` ; sans lui, repli automatique sur grep (`/memory-doctor` propose l'install).
+- **Optionnel** : `fastembed` (`pip install fastembed`) pour la recherche sémantique ; sans lui,
+  **repli automatique sur grep** (`/memory-doctor` propose l'install).
 
-## Structure
+## Structure du repo
 
 ```
 shared-memory/
-├── .claude-plugin/         (plugin.json, marketplace.json)
-├── .mcp.json               # déclare le serveur MCP (search_memory)
-├── skills/                 (memory-setup, -list, -import, -promote, -review, -ui, -doctor)
+├── .claude-plugin/         plugin.json, marketplace.json
+├── .mcp.json               déclare le serveur MCP (search_memory)
+├── .github/workflows/      CI (unittest au push)
+├── skills/                 memory-setup · -seed · -import · -list · -ui · -promote · -review · -doctor
 ├── scripts/
-│   ├── lib.sh, setup-vault.sh, view.sh, doctor.sh        # bash : setup, lancement viewer, prérequis install
-│   ├── build-viewer.py, serve-viewer.py                  # viewer : lecture du vault + serveur http local
-│   ├── sm_paths.py, embed.py, mcp-server.py, doctor.py   # recherche : chemins, embeddings, serveur MCP, diagnostic
-│   └── reshard.py, gen-synth-vault.py, verify-scale.py   # redécoupage en sous-domaines + tests d'échelle
-├── assets/                 (viewer-template.html, fact-template.md)
-├── tests/                  (unittest : viewer, embeddings, MCP, doctor, reshard)
-├── docs/                   (ARCHITECTURE.md, domain-convention.md)
-└── INSTALL.md
+│   ├── lib.sh, setup-vault.sh, view.sh, doctor.sh, hook-memory.sh   bash : setup, viewer, prérequis, hooks
+│   ├── build-viewer.py, serve-viewer.py                             viewer : lecture + serveur http + CRUD
+│   ├── sm_paths.py, embed.py, mcp-server.py, doctor.py, similar.py  recherche : embeddings, MCP, dédup
+│   └── reshard.py, gen-synth-vault.py, verify-scale.py              sharding récursif + vérif à l'échelle
+├── assets/                 viewer-template.html, fact-template.md
+├── tests/                  unittest (viewer, embeddings, MCP, doctor, reshard, hooks, dédup, …)
+└── docs/                   ARCHITECTURE.md, domain-convention.md, superpowers/ (specs & plans)
 ```
 
-Conception complète : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · convention de sharding :
-[`docs/domain-convention.md`](docs/domain-convention.md).
+## Documentation
+
+- 📐 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète (principes, deux étages,
+  multi-vault, viewer, recherche, hooks, fraîcheur, dédup, amorçage).
+- 🗂️ [`docs/domain-convention.md`](docs/domain-convention.md) — la convention de sharding : carte,
+  sous-index compacts, profondeur récursive, `reviewed`, garde-fous.
+- 🚀 [`INSTALL.md`](INSTALL.md) — installation pas-à-pas (admin + chaque membre).
+- 🧭 [`docs/superpowers/`](docs/superpowers/) — l'historique de conception : un **spec** + un **plan**
+  par chantier (sharding, viewer, recherche/MCP, reshard, CRUD, hooks, fraîcheur, dédup, amorçage…).
