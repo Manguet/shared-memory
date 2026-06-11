@@ -22,18 +22,18 @@ _SPEC = importlib.util.spec_from_file_location(
 _bv = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_bv)
 
-STALE_DAYS = 90
+_SPEC_STALE = importlib.util.spec_from_file_location(
+    "stale", os.path.join(_HERE, "stale.py")
+)
+_stale = importlib.util.module_from_spec(_SPEC_STALE)
+_SPEC_STALE.loader.exec_module(_stale)
+
+STALE_DAYS = _stale.STALE_DAYS
 
 
 def _is_stale(reviewed, today):
-    """Périmé si `reviewed` absent/illisible, ou vieux d'au moins STALE_DAYS jours (SP2)."""
-    if not reviewed:
-        return True
-    try:
-        d = datetime.date.fromisoformat(reviewed)
-    except ValueError:
-        return True
-    return (today - d).days >= STALE_DAYS
+    """Délègue à la source unique de la péremption (scripts/stale.py)."""
+    return _stale.is_stale(reviewed, today)
 
 
 def _patterns_section(index_body):

@@ -18,6 +18,8 @@ Stampée automatiquement à la **création**, à l'**édition** (viewer CRUD), e
 (qui vérifient le fait). Un fait non vérifié depuis **≥ 90 jours** (ou sans date) est **« à
 revérifier »** : la mémoire reste digne de confiance tant que ses faits sont datés et rafraîchis.
 Le viewer affiche un badge de fraîcheur et une vue « à revérifier ».
+Pour **agir** sur les faits périmés (les re-vérifier contre le code et re-stamper / corriger /
+retirer), utiliser `/memory-refresh` (moteur `scripts/stale.py`).
 
 ## Format canonique d'un fait
 
