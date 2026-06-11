@@ -48,6 +48,7 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 | `/memory-promote` | collecte les faits `project`/`reference`, vérifie contre le code, pousse une branche de proposition |
 | `/memory-review` | relire et fusionner les branches de proposition (git seul) |
 | `/memory-ui` | ouvre un viewer web local du vault (lecture + **CRUD local** des faits : créer/éditer/supprimer/déplacer, renommer un domaine — écriture en brouillon local, partage via `/memory-promote`) |
+| `/memory-seed` | amorcer un vault vide depuis les sources existantes (CLAUDE.md, doc) — brouillons |
 | `/memory-doctor` | diagnostiquer la recherche mémoire (`search_memory`) et proposer les installs (fastembed) |
 
 ## Recherche & passage à l'échelle
