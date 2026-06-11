@@ -110,7 +110,10 @@ class ResolveIntegrationTest(unittest.TestCase):
         r = run_script(self.c)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(conflicted(self.c), [])     # plus aucun chemin non-mergé
-        idx = open(os.path.join(self.c, "index", "mailing.md"), encoding="utf-8").read()
+        with open(os.path.join(self.c, "index", "mailing.md"), encoding="utf-8") as fh:
+            idx = fh.read()
+        self.assertNotIn("<<<<<<<", idx)   # marqueurs de conflit disparus = vraie régénération
+        self.assertNotIn(">>>>>>>", idx)
         self.assertIn("fait-a", idx)
         self.assertIn("fait-b", idx)
 
