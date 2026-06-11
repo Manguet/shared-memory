@@ -78,6 +78,56 @@ for p in reg.get("projets", []):
 PY
 }
 
+# Chemin du symlink mémoire enregistré pour un slug (vide si absent).
+sm_symlink_for_slug() {
+  local slug="$1"
+  [ -f "$SM_REGISTRY" ] || return 1
+  python3 - "$SM_REGISTRY" "$slug" <<'PY'
+import json, sys
+try:
+    reg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+slug = sys.argv[2]
+for p in reg.get("projets", []):
+    if p.get("slug") == slug:
+        print(p.get("symlink", ""))
+        break
+PY
+}
+
+# Liste tous les slugs enregistrés (un par ligne ; vide si pas de registre).
+sm_registry_slugs() {
+  [ -f "$SM_REGISTRY" ] || return 0
+  python3 - "$SM_REGISTRY" <<'PY'
+import json, sys
+try:
+    reg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+for p in reg.get("projets", []):
+    s = p.get("slug")
+    if s:
+        print(s)
+PY
+}
+
+# Retire l'entrée de registre d'un slug (idempotent, best-effort).
+sm_unregister() {
+  local slug="$1"
+  [ -f "$SM_REGISTRY" ] || return 0
+  python3 - "$SM_REGISTRY" "$slug" <<'PY'
+import json, sys
+path, slug = sys.argv[1], sys.argv[2]
+try:
+    reg = json.load(open(path))
+except Exception:
+    sys.exit(0)
+reg["projets"] = [p for p in reg.get("projets", []) if p.get("slug") != slug]
+json.dump(reg, open(path, "w"), indent=2, ensure_ascii=False)
+PY
+}
+
 # Compte les faits .md partageables modifiés/ajoutés/supprimés dans la working copy d'un clone
 # (modifs NON COMMITÉES = brouillons étage 1), hors MEMORY.md, index/**, et faits perso
 # (feedback_* ou frontmatter type: user|feedback). Renvoie un entier sur stdout. Best-effort : 0 si
