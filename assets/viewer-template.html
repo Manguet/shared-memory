@@ -152,6 +152,10 @@
   .fhead { display: flex; align-items: center; gap: 11px; margin-bottom: 6px; flex-wrap: wrap; }
   .fname { font-size: 18px; font-weight: 600; }
   .badge { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .05em; border: 1px solid currentColor; }
+  .fresh-badge { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .fresh-badge.fresh { color: var(--user); }
+  .fresh-badge.stale { color: var(--feedback); }
+  .fresh-badge.todo  { color: var(--faint); }
   .fdesc { color: var(--muted2); font-size: 12.5px; margin-bottom: 16px; }
   .fbody { white-space: pre-wrap; font-size: 13.5px; color: var(--text); }
   .fbody h4 { font-size: 13px; color: var(--coral); margin: 16px 0 4px; text-transform: uppercase; letter-spacing: .05em; }
@@ -271,6 +275,7 @@
         <button class="toolbtn" data-view="guide"><span class="k">?</span>guide des commandes</button>
         <button class="toolbtn" data-view="usage"><span class="k">»</span>guide d'utilisation</button>
         <button class="toolbtn" data-view="index"><span class="k">≡</span>index brut</button>
+        <button class="toolbtn" data-view="stale"><span class="k">⏱</span>à revérifier</button>
       </div>
     </aside>
     <main class="main" id="main"></main>
@@ -282,6 +287,15 @@ const TYPES = ["project", "reference", "feedback", "user"];
 const COLOR = { project: "var(--project)", reference: "var(--reference)", feedback: "var(--feedback)", user: "var(--user)" };
 const state = { view: "home", factId: null, query: "", types: new Set(TYPES), usageStep: 0 };
 const $ = id => document.getElementById(id);
+const STALE_DAYS = 90;
+function freshness(reviewed){
+  if(!reviewed) return { cls: 'todo', label: 'à vérifier', days: Infinity };
+  const days = Math.floor((Date.now() - Date.parse(reviewed)) / 86400000);
+  if(isNaN(days)) return { cls: 'todo', label: 'à vérifier', days: Infinity };
+  const stale = days >= STALE_DAYS;
+  return { cls: stale ? 'stale' : 'fresh', label: (stale ? '⚠ ' : '✓ ') + 'vérifié il y a ' + days + ' j', days };
+}
+function isStale(f){ return freshness(f.reviewed).cls !== 'fresh'; }
 const TOKEN = DATA.token || '';
 async function api(method, path, body){
   const r = await fetch(path, { method,
@@ -382,6 +396,7 @@ function badge(t){ return `<span class="badge" style="color:${COLOR[t]}">${t}</s
 function showFact(f){
   $('main').innerHTML = `<div class="card detail">
     <div class="fhead">${badge(f.type)}<span class="fname">${esc(f.name)}</span>
+      <span class="fresh-badge ${freshness(f.reviewed).cls}">${esc(freshness(f.reviewed).label)}</span>
       <span style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" id="f-edit">éditer</button>
         <button class="btn" id="f-del">supprimer</button></span></div>
@@ -459,6 +474,21 @@ function viewResults(q){
   return head + note + list;
 }
 
+function viewStale(){
+  const r = visible().filter(isStale)
+    .sort((a, b) => freshness(b.reviewed).days - freshness(a.reviewed).days);
+  const list = !r.length
+    ? `<div class="empty">Aucun fait périmé. 🎉</div>`
+    : `<div class="results">` + r.map(f => {
+        const fr = freshness(f.reviewed);
+        return `<button class="result" data-file="${esc(f.file)}">
+          <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span>
+            <span class="fresh-badge ${fr.cls}" style="margin-left:auto">${esc(fr.label)}</span></div>
+          <div class="rd">${esc((f.path || []).join(' / ') || 'général')}</div></button>`;
+      }).join('') + `</div>`;
+  return `<h3 class="view-h">À revérifier</h3>
+    <p class="view-p">Faits non vérifiés depuis ≥ ${STALE_DAYS} jours (ou jamais), du plus vieux au plus récent.</p>` + list;
+}
 function runServerSearch(q){
   const m = $('main');
   fetch('/search?q=' + encodeURIComponent(q))
@@ -609,6 +639,7 @@ function renderMain(){
   if(state.view === 'guide'){ m.innerHTML = viewGuide(); return; }
   if(state.view === 'usage'){ m.innerHTML = viewUsage(); bindUsage(); return; }
   if(state.view === 'index'){ m.innerHTML = viewIndex(); return; }
+  if(state.view === 'stale'){ m.innerHTML = viewStale(); bindResults(); return; }
   if(state.view === 'draft'){ m.innerHTML = viewDraft(); bindDraft(); return; }
   m.innerHTML = viewHome(); bindHome();
 }
