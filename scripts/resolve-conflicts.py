@@ -9,6 +9,7 @@ liste ce que l'humain doit arbitrer et s'arrête (le merge n'est jamais complét
 CLI : python3 resolve-conflicts.py <clone>
   sortie 0 : rien à résoudre, ou index régénérés et stagés (prêt à committer)
   sortie 1 : de vrais conflits (faits/carte/autres) restent — ou reshard a échoué
+  sortie 2 : erreur git (ex. <clone> invalide ou pas un dépôt)
 """
 import os
 import subprocess

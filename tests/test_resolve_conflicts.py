@@ -142,6 +142,26 @@ class ResolveIntegrationTest(unittest.TestCase):
         self.assertIn("partage.md", r.stdout)
         self.assertIn("mailing/partage.md", conflicted(self.c))   # toujours en conflit
 
+    def test_map_conflict_needs_human(self):
+        # A et B modifient la carte MEMORY.md de façon incompatible (même ligne)
+        git(self.c, "checkout", "-qb", "ma")
+        write(self.c, "MEMORY.md", "# Carte\n\n## Domaines (vue A)\n- mailing\n")
+        git(self.c, "add", "-A")
+        git(self.c, "commit", "-qm", "ma")
+        git(self.c, "checkout", "-q", "main")
+        git(self.c, "checkout", "-qb", "mb")
+        write(self.c, "MEMORY.md", "# Carte\n\n## Domaines (vue B)\n- mailing\n")
+        git(self.c, "add", "-A")
+        git(self.c, "commit", "-qm", "mb")
+        git(self.c, "checkout", "-q", "ma")
+        subprocess.run(["git", "-C", self.c, "merge", "--no-ff", "-m", "merge", "mb"],
+                       capture_output=True)
+        self.assertIn("MEMORY.md", conflicted(self.c))
+        r = run_script(self.c)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("MEMORY.md", r.stdout)
+        self.assertIn("MEMORY.md", conflicted(self.c))   # toujours en conflit, rien touché
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -68,11 +68,13 @@ sans `gh`. La mémoire canonique ne change que par cette revue
      ```
 
      - **Sortie 0** : seuls des `index/**` (dérivés) étaient en conflit ; ils ont été régénérés et
-       stagés. Finaliser : `git -C "<clone>" commit -m "memory: <résumé>"` puis
-       `git -C "<clone>" push origin main`.
+       stagés. Finaliser : `git -C "<clone>" commit -m "memory: <résumé>"`, puis
+       `git -C "<clone>" push origin main` et `git -C "<clone>" push origin --delete <branche>`.
      - **Sortie 1** : de vrais conflits restent (faits à arbitrer, ou carte `MEMORY.md`). Les
        résoudre à la main (choisir la bonne version d'un fait ; garder l'union des domaines dans la
        carte sans doublon), `git -C "<clone>" add <fichier>`, puis **relancer** l'outil.
+     - **Sortie 2** : erreur git (le `<clone>` n'est pas un dépôt valide, ou git a échoué) —
+       vérifier le chemin du clone.
      - **Échappatoire** : `git -C "<clone>" merge --abort` annule la fusion sans rien pousser ; la
        branche `promote/*` reste intacte pour réessayer.
 
