@@ -23,7 +23,7 @@ bv = _load("build_viewer", "build-viewer.py")
 embed = _load("embed", "embed.py")
 
 
-def run(vault, text, threshold=0.85, exclude=None, embed_fn="auto"):
+def run(vault, text, threshold=0.80, exclude=None, embed_fn="auto"):
     """`embed_fn="auto"` charge fastembed ; passer un factice pour les tests, ou None."""
     facts, _ = bv.collect_facts(vault, include_body=True)
     if embed_fn == "auto":
@@ -36,7 +36,7 @@ def main():
     ap = argparse.ArgumentParser(description="Quasi-doublons d'un texte candidat dans un vault.")
     ap.add_argument("vault")
     ap.add_argument("--text", required=True)
-    ap.add_argument("--threshold", type=float, default=0.85)
+    ap.add_argument("--threshold", type=float, default=0.80)
     ap.add_argument("--exclude", default=None)
     args = ap.parse_args()
     print(json.dumps(run(args.vault, args.text, args.threshold, args.exclude), ensure_ascii=False))

@@ -356,6 +356,6 @@ ne s'érode pas en silence — un fait périmé est visible.
 
 ### Dédup sémantique (anti-doublon)
 À la création d'un fait (`/memory-import`, CRUD du viewer), `embed.find_similar` signale les
-quasi-doublons (cosine ≥ 0.85, fastembed optionnel) → l'humain met à jour le fait existant plutôt
+quasi-doublons (cosine ≥ 0.80, fastembed optionnel) → l'humain met à jour le fait existant plutôt
 que d'empiler. On **signale, jamais on ne fusionne** (gouvernance). Scan global d'un vault déjà
 peuplé : hors scope (évolution).

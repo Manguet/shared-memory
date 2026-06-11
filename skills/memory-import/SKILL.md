@@ -39,7 +39,7 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
    python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/similar.py "<clone>" --text "<nom>. <description>. <corps>"
    ```
 
-   Si la sortie contient des `similar` (cosine ≥ 0.85), **proposer à l'utilisateur de mettre à jour
+   Si la sortie contient des `similar` (cosine ≥ 0.80), **proposer à l'utilisateur de mettre à jour
    le fait existant** (le plus proche) plutôt que d'en créer un nouveau ; ne créer un nouveau fait
    que s'il est réellement distinct. Si `vector_inactive: true` (fastembed absent), le **mentionner**
    (« dédup sémantique inactive — `pip install fastembed` ») et continuer sans bloquer.

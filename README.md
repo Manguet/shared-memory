@@ -58,7 +58,7 @@ seulement les prérequis : `bash scripts/doctor.sh`.
 - **`/memory-doctor`** : diagnostique les prérequis de la recherche (fastembed, modèle) et propose les installs — pas de dégradation silencieuse.
 - **Boucle vivante (hooks)** : au **démarrage de session**, le plugin **synchronise** le vault (`git pull --ff-only`, best-effort) et **rappelle** les faits locaux non promus (« prévois `/memory-promote` avant de fermer ») ; un rappel **en fin de session** clôt la boucle. Tout est silencieux si le projet n'est pas branché.
 - **Fraîcheur** : chaque fait porte une date `reviewed` (vérifié le…) ; le viewer signale les faits **périmés** (≥ 90 j ou jamais vérifiés) via un badge et une vue « à revérifier » → la confiance ne s'érode pas en silence.
-- **Dédup sémantique** : à la création (import / CRUD), un fait trop proche d'un existant (cosine ≥ 0.85) est **signalé** → on met à jour plutôt qu'empiler un doublon (fastembed optionnel).
+- **Dédup sémantique** : à la création (import / CRUD), un fait trop proche d'un existant (cosine ≥ 0.80) est **signalé** → on met à jour plutôt qu'empiler un doublon (fastembed optionnel).
 
 ## Démarrage
 

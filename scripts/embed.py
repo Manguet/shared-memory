@@ -129,7 +129,7 @@ def search(query, facts, store, embed_fn, k=8):
     return {"results": ordered, "vector_inactive": False}
 
 
-def find_similar(text, facts, store, embed_fn, threshold=0.85, k=3, exclude=None):
+def find_similar(text, facts, store, embed_fn, threshold=0.80, k=3, exclude=None):
     """Quasi-doublons sémantiques d'un `text` candidat : pointeurs des faits dont le cosine ≥ seuil
     (hors `exclude`), top k, triés par score. Jamais de body. embed_fn None -> vector_inactive."""
     if embed_fn is None:
