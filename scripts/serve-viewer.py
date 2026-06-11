@@ -7,6 +7,7 @@ Usage: serve-viewer.py <vault-dir> <template-html> [port]
 - GET /search?q=…  -> grep full-text sur les faits, renvoie les métadonnées matchantes
 Bind 127.0.0.1 uniquement.
 """
+import datetime
 import importlib.util
 import json
 import os
@@ -40,9 +41,10 @@ class ApiError(Exception):
         self.message = message
 
 
-def _fact_text(name, description, type_, body):
-    return ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n---\n%s\n"
-            % (name, description, type_, body))
+def _fact_text(name, description, type_, body, reviewed=None):
+    reviewed = reviewed or datetime.date.today().isoformat()
+    return ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n  reviewed: %s\n---\n%s\n"
+            % (name, description, type_, reviewed, body))
 
 
 def _validate(data):
