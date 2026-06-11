@@ -628,6 +628,7 @@ function viewDraft(){
       <label>domaine</label><input id="d-domain" list="d-domains" placeholder="ex: mailing (vide = général)"><datalist id="d-domains">${domainOptions('')}</datalist>
       <label>contenu</label><textarea id="d-body" placeholder="Le fait, concis et autonome…"></textarea>
     </div>
+    <div id="d-warn"></div>
     <div style="margin-top:10px"><button class="btn" id="d-create">créer le fait</button><span class="copied" id="d-msg" style="display:none"></span></div>`;
 }
 
@@ -656,14 +657,31 @@ function bindUsage(){ document.querySelectorAll('.usage .tl-step').forEach(el =>
 
 function bindDraft(){
   const v = id => ($(id) ? $(id).value.trim() : '');
+  async function doCreate(){
+    const meta = await api('POST', '/api/fact', { name:v('d-name'), description:v('d-desc'),
+      type:$('d-type').value, body:$('d-body').value, domain:v('d-domain') });
+    applyMeta(meta);
+    state.view='fact'; state.factId = (v('d-domain') && $('d-type').value!=='user' && $('d-type').value!=='feedback')
+      ? v('d-domain')+'/'+v('d-name')+'.md' : v('d-name')+'.md';
+    update();
+  }
   $('d-create').addEventListener('click', async () => {
     try {
-      const meta = await api('POST', '/api/fact', { name:v('d-name'), description:v('d-desc'),
-        type:$('d-type').value, body:$('d-body').value, domain:v('d-domain') });
-      applyMeta(meta);
-      state.view='fact'; state.factId = (v('d-domain') && $('d-type').value!=='user' && $('d-type').value!=='feedback')
-        ? v('d-domain')+'/'+v('d-name')+'.md' : v('d-name')+'.md';
-      update();
+      const sim = await api('POST', '/api/similar', { name:v('d-name'), description:v('d-desc'), body:$('d-body').value });
+      if(sim.similar && sim.similar.length){
+        $('d-warn').innerHTML = `<div class="ud-note" style="border-color:var(--reference)">
+          ⚠ Ce fait ressemble à un fait existant — mets-le à jour plutôt que d'empiler un doublon :
+          <div style="margin:8px 0">${sim.similar.map(s =>
+            `<button class="result" data-file="${esc(s.file)}" style="margin:3px 0">
+               <div class="rh"><span class="rn">${esc(s.name)}</span>
+               <span class="rd" style="margin-left:auto">${(s.score*100).toFixed(0)}%</span></div></button>`).join('')}</div>
+          <button class="btn" id="d-force">créer quand même</button></div>`;
+        $('d-warn').querySelectorAll('.result').forEach(b =>
+          b.onclick = () => { state.view='fact'; state.factId=b.dataset.file; $('q').value=''; state.query=''; update(); });
+        $('d-force').onclick = async () => { try { await doCreate(); } catch(e){ alert(String(e.message||e)); } };
+        return;
+      }
+      await doCreate();
     } catch(e){ const m=$('d-msg'); m.style.display='inline'; m.style.color='var(--feedback)'; m.textContent = String(e.message||e); }
   });
 }

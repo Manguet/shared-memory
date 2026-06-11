@@ -33,6 +33,17 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
    proche** plutôt qu'en créer un nouveau (garde-fou anti-prolifération : `mailing` vs `emails` vs
    `mail`). En cas de doute, demander à l'utilisateur.
 
+4bis. **Vérifier les quasi-doublons** avant d'écrire chaque fait. Lancer :
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/similar.py "<clone>" --text "<nom>. <description>. <corps>"
+   ```
+
+   Si la sortie contient des `similar` (cosine ≥ 0.80), **proposer à l'utilisateur de mettre à jour
+   le fait existant** (le plus proche) plutôt que d'en créer un nouveau ; ne créer un nouveau fait
+   que s'il est réellement distinct. Si `vector_inactive: true` (fastembed absent), le **mentionner**
+   (« dédup sémantique inactive — `pip install fastembed` ») et continuer sans bloquer.
+
 5. **Écrire un fichier par fait** dans `<domaine>/<fait>.md` du clone, en suivant
    `${CLAUDE_PLUGIN_ROOT}/assets/fact-template.md` :
    - `name` : slug kebab-case unique (vérifier l'absence de collision avec Glob/Grep) ;
@@ -86,3 +97,5 @@ Terminer en disant mot pour mot : « Pour proposer ces faits à l'équipe, lance
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/lib.sh`** — helpers de localisation du vault.
 - **`${CLAUDE_PLUGIN_ROOT}/scripts/reshard.py`** — régénère les index compacts et découpe les
   domaines trop gros en sous-domaines.
+- **`${CLAUDE_PLUGIN_ROOT}/scripts/similar.py`** — détecte les quasi-doublons sémantiques d'un fait
+  candidat (réutilise les embeddings).
