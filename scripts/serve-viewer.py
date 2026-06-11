@@ -29,6 +29,7 @@ def _load(name, filename):
 
 bv = _load("build_viewer", "build-viewer.py")
 reshard = _load("reshard", "reshard.py")
+embed = _load("embed", "embed.py")
 
 SLUG_RE = re.compile(r"^[a-z0-9-]+$")
 TYPES = {"project", "reference", "user", "feedback"}
@@ -159,6 +160,16 @@ def rename_domain(vault, old, new):
     return _metadata(vault)
 
 
+def similar(vault, data):
+    text = "\n".join(((data.get("name") or "").strip(),
+                      (data.get("description") or "").strip(),
+                      data.get("body", "") or ""))
+    facts, _ = bv.collect_facts(vault, include_body=True)
+    embed_fn = embed.load_fastembed_embed_fn()
+    store = {} if embed_fn is None else embed.refresh_store(facts, {}, embed_fn)
+    return embed.find_similar(text, facts, store, embed_fn, exclude=(data.get("exclude") or None))
+
+
 def make_handler(vault, template):
     vault_real = os.path.realpath(vault)
     token = secrets.token_hex(16)
@@ -220,6 +231,12 @@ def make_handler(vault, template):
 
         def do_POST(self):
             u = urlparse(self.path)
+            if u.path == "/api/similar":                 # requête en lecture : pas de jeton
+                try:
+                    self._ok(similar(vault, self._json_body()))
+                except (ValueError, OSError) as e:
+                    self._send(400, "erreur: %s" % e)
+                return
             try:
                 self._require_token()
                 if u.path == "/api/fact":

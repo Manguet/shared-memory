@@ -278,5 +278,35 @@ class ReviewedStampTest(ServerTestBase):
         self.assertIn("reviewed: %s" % _dt.date.today().isoformat(), txt)
 
 
+class SimilarEndpointTest(ServerTestBase):
+    def _fake(self):
+        return lambda texts: [[1.0, 0.0] if "grp1" in t else [0.0, 1.0] for t in texts]
+
+    def test_similar_returns_near_dup(self):
+        write(os.path.join(self.vault, "mailing", "x.md"),
+              "---\nname: x\ndescription: grp1 alpha\nmetadata:\n  type: project\n---\ncorps")
+        orig = sv.embed.load_fastembed_embed_fn
+        sv.embed.load_fastembed_embed_fn = self._fake
+        try:
+            r = write_req(self.port, "POST", "/api/similar",
+                          {"name": "y", "description": "grp1 beta", "body": "z"})
+            res = json.loads(r.read().decode("utf-8"))
+        finally:
+            sv.embed.load_fastembed_embed_fn = orig
+        self.assertFalse(res["vector_inactive"])
+        self.assertIn("mailing/x.md", [s["file"] for s in res["similar"]])
+
+    def test_similar_inactive_without_fastembed(self):
+        orig = sv.embed.load_fastembed_embed_fn
+        sv.embed.load_fastembed_embed_fn = lambda: None
+        try:
+            r = write_req(self.port, "POST", "/api/similar",
+                          {"name": "y", "description": "d", "body": "z"})
+            res = json.loads(r.read().decode("utf-8"))
+        finally:
+            sv.embed.load_fastembed_embed_fn = orig
+        self.assertTrue(res["vector_inactive"])
+
+
 if __name__ == "__main__":
     unittest.main()
