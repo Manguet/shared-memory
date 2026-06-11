@@ -365,3 +365,18 @@ Un vault vide n'a aucune valeur. `/memory-seed` le **peuple** depuis les sources
 (CLAUDE.md, doc) : extraction de faits atomiques (conventions d'import), **dédup** contre l'existant
 (`similar.py`), **confirmation** avant écriture, brouillons (étage 1) → `/memory-promote`. Pas de
 scan de code (les faits restent humains et vérifiables).
+
+### Digest au démarrage (rappel automatique)
+
+Nativement, seule la **carte** `MEMORY.md` (les domaines) est chargée au `SessionStart` —
+**pas le contenu des faits**. Le **digest** comble ce trou : `scripts/digest.py`
+(`build_digest(vault, max_lines=120)`) lit le vault (réutilise `collect_facts`) et émet, via
+`hook-memory.sh start`, **une description d'une ligne par fait, groupée par domaine**, avant le
+rappel synchro/promote. Claude **sait** alors ce qui existe et lit le fait quand le sujet arrive,
+**sans qu'on le lui demande** — le rappel devient quasi mains-libres.
+
+C'est **borné** (principe du sharding) : sous `max_lines` (120), digest complet ; un fait périmé
+(`reviewed` ≥ 90 j ou absent, cf. fraîcheur SP2) porte un **`⚠`** ; la section
+« Patterns & Conventions » de `MEMORY.md` est jointe. Au-dessus du budget → digest **dégradé**
+(domaines + comptes + renvoi `search_memory`/`/memory-list`). **Pur lecture de fichiers, aucun
+fastembed** : marche toujours, coût borné (~2 k tokens au pire), zéro coût par message.
