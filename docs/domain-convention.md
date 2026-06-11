@@ -11,6 +11,14 @@ entier**, jamais de l'index. Conséquence directe : l'index peut être **compact
 trouver vite, à bas coût en tokens) **sans risque pour la véracité**, puisqu'il ne fait jamais
 autorité — il pointe.
 
+## Fraîcheur des faits (`reviewed`)
+
+Chaque fait porte `metadata.reviewed: AAAA-MM-JJ` = **date de dernière vérification contre le code**.
+Stampée automatiquement à la **création**, à l'**édition** (viewer CRUD), et au **promote/review**
+(qui vérifient le fait). Un fait non vérifié depuis **≥ 90 jours** (ou sans date) est **« à
+revérifier »** : la mémoire reste digne de confiance tant que ses faits sont datés et rafraîchis.
+Le viewer affiche un badge de fraîcheur et une vue « à revérifier ».
+
 ## Structure du vault
 
 ```

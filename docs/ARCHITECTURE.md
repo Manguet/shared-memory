@@ -347,3 +347,9 @@ Deux **hooks plugin** referment la boucle sans discipline manuelle. `SessionStar
 étage 1) pour ne pas travailler sur une mémoire périmée, puis rappelle les faits locaux non promus
 (« prévois `/memory-promote` avant de fermer »). `SessionEnd` : dernier rappel. Tout est silencieux
 si le projet n'est pas branché ou en cas d'échec (jamais bloquant). Script : `scripts/hook-memory.sh`.
+
+### Fraîcheur (anti-péremption)
+Chaque fait porte `metadata.reviewed` (date de dernière vérification). Stampée à la création /
+édition / promote-review ; un fait non vérifié depuis ≥ 90 j (ou sans date) est signalé « à
+revérifier » (badge + vue dédiée dans le viewer, surface dans `/memory-list`). Le but : la confiance
+ne s'érode pas en silence — un fait périmé est visible.

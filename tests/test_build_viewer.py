@@ -121,5 +121,24 @@ class PathTest(unittest.TestCase):
         self.assertEqual(facts[0]["body"], "le corps")
 
 
+class ReviewedFieldTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_reviewed_exposed_present_and_empty(self):
+        write(os.path.join(self.vault, "mailing", "a.md"),
+              "---\nname: a\ndescription: d\nmetadata:\n  type: project\n  reviewed: 2026-06-11\n---\nx")
+        write(os.path.join(self.vault, "mailing", "b.md"),
+              "---\nname: b\ndescription: d\nmetadata:\n  type: project\n---\ny")
+        facts, _ = bv.collect_facts(self.vault, include_body=False)
+        by = {f["name"]: f for f in facts}
+        self.assertEqual(by["a"]["reviewed"], "2026-06-11")
+        self.assertEqual(by["b"]["reviewed"], "")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -39,6 +39,7 @@ ensuite proposés à l'équipe via `/memory-promote`. Ce skill **ne pousse rien*
    - `description` : une ligne **discriminante** (distingue le fait de ses voisins du même
      domaine) — elle sert au recall **et** alimente directement le sous-index compact (DRY) ;
    - `metadata.type` : `project` ou `reference` (jamais `user`/`feedback` ici) ;
+   - `metadata.reviewed` : la **date du jour** (`AAAA-MM-JJ`) — le fait vient d'être écrit/vérifié.
    - corps concis, liens `[[autre-slug]]` vers les faits connexes.
 
 6. **Régénérer l'index via reshard** (au lieu d'écrire la ligne à la main). Compter d'abord les

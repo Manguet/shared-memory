@@ -45,6 +45,8 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    encore vrai ? contredit-il la version canonique dans `main` ? Écarter ou corriger les faits
    périmés/contradictoires, et résumer à l'utilisateur ce qui est gardé, corrigé, écarté.
    C'est le cœur du skill — ne pas le sauter.
+   Pour chaque fait **confirmé vrai** contre le code, mettre à jour son `metadata.reviewed` à la
+   **date du jour** (c'est le signal de fraîcheur : « vérifié le … »).
 
 5. **Régénérer l'index hiérarchique via reshard** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
    Chaque fait retenu vit dans `<domaine>/<fait>.md`. Lancer :

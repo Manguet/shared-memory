@@ -39,7 +39,10 @@ visuel `/memory-ui`.
 - **L'index aiguille, le fait est la source** : le sous-index sert à **trouver** ; toute
   affirmation (valeur, citation, ligne de code) provient du **fait lu en entier**, pas de la ligne
   d'index.
-- **Fraîcheur** : les faits sont des observations datées. Avant d'**affirmer** qu'un fait est
+- **Fraîcheur** : chaque fait porte `metadata.reviewed` (date de dernière vérification). **Signaler**
+  les faits non vérifiés depuis **≥ 90 jours** ou **sans date** comme « à revérifier » ; sur demande
+  « qu'est-ce qui est périmé ? », lister ces faits du plus vieux au plus récent.
+- **Fraîcheur (vérification à l'affirmation)** : les faits sont des observations datées. Avant d'**affirmer** qu'un fait est
   vrai (citation de fichier/ligne, comportement du code), le confronter au code actuel.
 - **Lecture seule** : ce skill n'écrit jamais. Pour ajouter/normaliser : `/memory-import` ;
   pour partager : `/memory-promote`.

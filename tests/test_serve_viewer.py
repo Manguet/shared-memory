@@ -256,5 +256,27 @@ class HardeningTest(ServerTestBase):
         self.assertIn("La stratégie **mailing** est centrale.", mem)
 
 
+import datetime as _dt
+
+
+class ReviewedStampTest(ServerTestBase):
+    def _token(self):
+        _, html = self.get("/"); return _token_of(html)
+
+    def test_create_stamps_reviewed_today(self):
+        write_req(self.port, "POST", "/api/fact",
+                  {"name": "r", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
+                  token=self._token())
+        txt = open(os.path.join(self.vault, "mailing", "r.md"), encoding="utf-8").read()
+        self.assertIn("reviewed: %s" % _dt.date.today().isoformat(), txt)
+
+    def test_update_restamps_reviewed_today(self):
+        write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
+                  {"name": "audit", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
+                  token=self._token())
+        txt = open(os.path.join(self.vault, "mailing", "audit.md"), encoding="utf-8").read()
+        self.assertIn("reviewed: %s" % _dt.date.today().isoformat(), txt)
+
+
 if __name__ == "__main__":
     unittest.main()
