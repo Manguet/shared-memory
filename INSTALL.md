@@ -117,6 +117,7 @@ Les commandes utiles :
 | Commande | Quand |
 |----------|-------|
 | `/memory-ui` | voir la mémoire (et le guide visuel) |
+| `/memory-seed` | amorcer un vault vide depuis CLAUDE.md + la doc (brouillons) |
 | `/memory-list <terme>` | chercher |
 | `/memory-import` | ajouter de la doc / un fait |
 | `/memory-promote` | proposer ses faits à l'équipe (pousse une branche) |

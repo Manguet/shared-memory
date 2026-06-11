@@ -359,3 +359,9 @@ ne s'érode pas en silence — un fait périmé est visible.
 quasi-doublons (cosine ≥ 0.80, fastembed optionnel) → l'humain met à jour le fait existant plutôt
 que d'empiler. On **signale, jamais on ne fusionne** (gouvernance). Scan global d'un vault déjà
 peuplé : hors scope (évolution).
+
+### Amorçage à froid (`/memory-seed`)
+Un vault vide n'a aucune valeur. `/memory-seed` le **peuple** depuis les sources humaines du projet
+(CLAUDE.md, doc) : extraction de faits atomiques (conventions d'import), **dédup** contre l'existant
+(`similar.py`), **confirmation** avant écriture, brouillons (étage 1) → `/memory-promote`. Pas de
+scan de code (les faits restent humains et vérifiables).
