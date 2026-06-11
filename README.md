@@ -114,6 +114,7 @@ flowchart TD
 | `/memory-import` | normalise un doc brut en **faits atomiques** (+ dédup) |
 | `/memory-list` | consulter / chercher dans la mémoire (conversationnel) |
 | `/memory-ui` | **viewer web** local : explorer + **CRUD** des faits (créer/éditer/supprimer/déplacer) |
+| `/memory-lint` | **valider/nettoyer** les faits : rapport des problèmes de format + correction mécanique du frontmatter à plat (opt-in) |
 | `/memory-promote` | proposer ses faits à l'équipe (vérifie le code, pousse une branche) |
 | `/memory-review` | relire et fusionner les propositions (git seul) |
 | `/memory-doctor` | diagnostiquer la recherche sémantique et proposer les installs |
@@ -137,6 +138,9 @@ flowchart TD
   (≥ 90 j ou jamais vérifiés) → la confiance ne s'érode pas en silence.
 - **🧬 Dédup sémantique** — à la création, un fait trop proche d'un existant (cosine ≥ 0.80) est
   **signalé** : on met à jour plutôt qu'empiler un doublon.
+- **🧹 Lint des faits** — `/memory-lint` détecte les dérives de format (champs requis, type valide,
+  `name` unique, date bien formée, wikilinks cassés) et **normalise** le frontmatter à plat vers le
+  bloc `metadata:` canonique. Rapport d'abord ; **correction opt-in**, jamais silencieuse.
 - **🔒 Sûreté** — faits perso `gitignore`és (jamais poussés), serveur lié à `127.0.0.1` + jeton
   same-origin, validation anti-traversal, CI sur chaque push.
 

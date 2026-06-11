@@ -60,7 +60,18 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    **nouveau domaine** apparaît, ajouter sa ligne à `MEMORY.md` à la main. Si un découpage a lieu,
    le **signaler** dans le résumé de proposition.
 
-6. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
+6. **Garde-fou lint (advisory).** Avant de pousser, vérifier le format des faits du clone :
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/lint.py "<clone>"
+   ```
+
+   **S'il y a des erreurs** (`severity=error` : champ requis manquant, type invalide, `name` en
+   double), les **afficher** et **demander** s'il faut les corriger d'abord (via `/memory-lint` ou
+   à la main). **Advisory** : ne pas bloquer la promotion de force ; l'utilisateur décide. Les
+   avertissements sont mentionnés mais ne retardent pas le push.
+
+7. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
 
    ```bash
    git -C "<clone>" checkout -b promote/<slug>-<court-descriptif> origin/main
@@ -69,7 +80,7 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    git -C "<clone>" push -u origin HEAD
    ```
 
-7. **Confirmer.** Donner le **nom de la branche** poussée et rappeler qu'un **référent** doit la
+8. **Confirmer.** Donner le **nom de la branche** poussée et rappeler qu'un **référent** doit la
    relire et la fusionner via `/memory-review` (jamais l'auteur lui-même) avant qu'elle devienne
    canonique.
 
