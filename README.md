@@ -110,6 +110,7 @@ flowchart TD
 | Skill | Rôle |
 |-------|------|
 | `/memory-setup` | branche le projet sur le vault (clone + symlink + registre) |
+| `/memory-unsetup` | **débrancher** le projet (retire symlink + registre, garde le clone) — inverse de `/memory-setup` |
 | `/memory-seed` | **amorce** un vault vide depuis tes sources (CLAUDE.md, doc) → brouillons |
 | `/memory-import` | normalise un doc brut en **faits atomiques** (+ dédup) |
 | `/memory-list` | consulter / chercher dans la mémoire (conversationnel) |

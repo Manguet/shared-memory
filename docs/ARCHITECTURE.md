@@ -431,3 +431,20 @@ listés à juger (pas de code à vérifier). Tout est **brouillon (étage 1)** �
 
 Principe : **re-stamper signifie « vérifié », pas « existe »** — jamais de re-stampage en masse à
 l'aveugle ; pas d'archivage automatique (retirer un fait est une décision humaine).
+
+## 16. Mise à jour & désinstallation
+
+Le **setup** crée, par projet, un **symlink** (`~/.claude/projects/<slug>/memory → clone`) et une
+**entrée de registre** ; par machine, l'installateur crée `~/.shared-memory/{plugin,vaults,models,embeddings}`.
+La désinstallation en est l'**inverse exact**, en **conservant les données** par défaut :
+
+- **Par projet** — `/memory-unsetup` (→ `scripts/unlink-vault.sh`) : retire le symlink et l'entrée
+  de registre, **garde le clone**. Un dossier mémoire n'est retiré que **si c'est un symlink**
+  (`[ -L ]`) — jamais une vraie mémoire locale.
+- **Machine** — `scripts/uninstall.sh [--purge]` : débranche tous les projets, retire le plugin et
+  les caches. Les clones de vault sont **gardés** sauf `--purge` (qui supprime aussi les données et
+  d'éventuels brouillons non promus). Un script ne peut pas lancer `/plugin uninstall` → on guide.
+
+**Mise à jour** : `install.sh` fait déjà un `git pull` du plugin s'il est déjà cloné — « update » =
+relancer l'installateur + `/reload-plugins`. Les fonctions registre (`sm_symlink_for_slug`,
+`sm_registry_slugs`, `sm_unregister`) sont partagées par les deux scripts et testées.

@@ -156,3 +156,25 @@ claude --plugin-dir /var/www/shared-memory
   Code à ce chemin. L'ouvrir une fois, puis relancer `/memory-setup`.
 - **`/plugin marketplace add` ne répond pas** → le repo plugin n'est pas encore poussé, ou ton
   compte n'y a pas accès.
+
+## Mise à jour
+
+Le plugin se met à jour en **relançant l'installateur** (il fait un `git pull` s'il est déjà cloné) :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Manguet/shared-memory/main/install.sh | bash
+```
+
+Puis, dans Claude Code : `/reload-plugins`.
+
+## Désinstallation
+
+- **Débrancher un projet** (garde le clone du vault) : dans Claude Code, `/memory-unsetup`.
+- **Désinstaller la machine** (retire le plugin + caches ; garde les clones) — en terminal :
+
+```bash
+bash ~/.shared-memory/plugin/scripts/uninstall.sh          # garde les clones de vault
+bash ~/.shared-memory/plugin/scripts/uninstall.sh --purge  # supprime AUSSI les clones (données)
+```
+
+  Puis, dans Claude Code : `/plugin uninstall shared-memory`.
