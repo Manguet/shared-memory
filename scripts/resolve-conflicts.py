@@ -39,6 +39,9 @@ def _git(clone, *args):
 
 def _conflicted_paths(clone):
     r = _git(clone, "diff", "--name-only", "--diff-filter=U")
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr or "git diff a échoué\n")
+        sys.exit(2)
     return [ln for ln in r.stdout.splitlines() if ln.strip()]
 
 
@@ -75,6 +78,9 @@ def main(clone):
         print("Échec de reshard ; rien n'a été stagé.")
         return 1
     _git(clone, "add", "-A", "index/")
+    if _conflicted_paths(clone):
+        print("Des conflits subsistent après régénération — à vérifier à la main.")
+        return 1
     print("✅ %d index régénéré(s) et résolu(s) — termine par `git commit`." % len(c["derived"]))
     return 0
 

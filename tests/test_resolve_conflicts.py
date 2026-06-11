@@ -30,6 +30,16 @@ class ClassifyConflictsTest(unittest.TestCase):
         c = rc.classify_conflicts(["notes.txt"])
         self.assertEqual(c["other"], ["notes.txt"])
 
+    def test_mixed_partition_total(self):
+        paths = ["index/mailing.md", "MEMORY.md", "mailing/relance.md", "notes.txt"]
+        c = rc.classify_conflicts(paths)
+        self.assertEqual(c["derived"], ["index/mailing.md"])
+        self.assertEqual(c["map"], ["MEMORY.md"])
+        self.assertEqual(c["facts"], ["mailing/relance.md"])
+        self.assertEqual(c["other"], ["notes.txt"])
+        # partition totale : pas de perte, pas de doublon
+        self.assertEqual(sum(len(v) for v in c.values()), len(paths))
+
     def test_empty(self):
         c = rc.classify_conflicts([])
         self.assertEqual(c, {"derived": [], "map": [], "facts": [], "other": []})
