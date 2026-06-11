@@ -110,7 +110,9 @@ Ouvrir le projet dans Claude Code, puis :
 /memory-setup git@github.com:Manguet/<projet>-memory.git
 ```
 
-C'est tout. À partir de là, la mémoire de ce projet est partagée. Les commandes utiles :
+C'est tout. À partir de là, la mémoire de ce projet est partagée. (`/memory-setup` configure aussi
+un **ignore local** des faits perso `feedback_*` — ils ne sont jamais poussés dans le vault partagé.)
+Les commandes utiles :
 
 | Commande | Quand |
 |----------|-------|
