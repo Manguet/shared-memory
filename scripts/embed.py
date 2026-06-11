@@ -129,6 +129,25 @@ def search(query, facts, store, embed_fn, k=8):
     return {"results": ordered, "vector_inactive": False}
 
 
+def find_similar(text, facts, store, embed_fn, threshold=0.85, k=3, exclude=None):
+    """Quasi-doublons sémantiques d'un `text` candidat : pointeurs des faits dont le cosine ≥ seuil
+    (hors `exclude`), top k, triés par score. Jamais de body. embed_fn None -> vector_inactive."""
+    if embed_fn is None:
+        return {"similar": [], "vector_inactive": True}
+    by_file = {f["file"]: f for f in facts}
+    qvec = embed_fn([text])[0]
+    out = []
+    for file, score in semantic_topk(qvec, store, k + 5):
+        if file == exclude or file not in by_file:
+            continue
+        if score < threshold:
+            break
+        out.append(_pointer(by_file[file], round(score, 4)))
+        if len(out) >= k:
+            break
+    return {"similar": out, "vector_inactive": False}
+
+
 # Modèle multilingue (FR inclus), 384 dims, ~225 Mo — local, sans préfixe spécial.
 EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 

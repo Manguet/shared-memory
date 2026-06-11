@@ -122,5 +122,26 @@ class FastembedLoaderTest(unittest.TestCase):
         self.assertTrue(fn is None or callable(fn))
 
 
+class FindSimilarTest(unittest.TestCase):
+    def _fe(self, texts):
+        return [[1.0, 0.0] if "grp1" in t else [0.0, 1.0] for t in texts]
+
+    def test_above_threshold_excludes_self(self):
+        facts = [fact("d/a.md", "a", "grp1 alpha", "x"),
+                 fact("d/b.md", "b", "grp1 beta", "y"),
+                 fact("d/c.md", "c", "grp2 gamma", "z")]
+        store = E.refresh_store(facts, {}, self._fe)
+        res = E.find_similar("grp1 nouveau", facts, store, self._fe, threshold=0.85, k=3, exclude="d/a.md")
+        files = [r["file"] for r in res["similar"]]
+        self.assertEqual(files, ["d/b.md"])
+        self.assertNotIn("body", res["similar"][0])
+        self.assertFalse(res["vector_inactive"])
+
+    def test_no_embed_fn_inactive(self):
+        res = E.find_similar("x", [], {}, None)
+        self.assertTrue(res["vector_inactive"])
+        self.assertEqual(res["similar"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
