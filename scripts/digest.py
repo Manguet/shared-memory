@@ -53,6 +53,11 @@ def _patterns_section(index_body):
     return "\n".join(out).strip()
 
 
+def _count(n, word):
+    """« 1 fait », « 2 faits » — pluriel français simple (ajout d'un -s au pluriel)."""
+    return "%d %s%s" % (n, word, "s" if n > 1 else "")
+
+
 def build_digest(vault, max_lines=120, today=None):
     today = today or datetime.date.today()
     facts, index_body = _bv.collect_facts(vault, include_body=False)
@@ -66,14 +71,14 @@ def build_digest(vault, max_lines=120, today=None):
     domains = sorted(by_domain)
 
     if n > max_lines:
-        lines = ["## Mémoire d'équipe (%d faits, %d domaines) — digest complet trop volumineux"
-                 % (n, len(domains))]
+        lines = ["## Mémoire d'équipe (%s, %s) — digest complet trop volumineux"
+                 % (_count(n, "fait"), _count(len(domains), "domaine"))]
         for d in domains:
-            lines.append("- %s — %d fait(s)" % (d, len(by_domain[d])))
+            lines.append("- %s — %s" % (d, _count(len(by_domain[d]), "fait")))
         lines.append("Pour le détail, utilise `search_memory` (MCP) ou `/memory-list`.")
         return "\n".join(lines)
 
-    lines = ["## Mémoire d'équipe (%d faits)" % n]
+    lines = ["## Mémoire d'équipe (%s)" % _count(n, "fait")]
     for d in domains:
         lines.append("")
         lines.append("### %s" % d)

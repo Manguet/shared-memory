@@ -51,6 +51,13 @@ class BuildDigestTest(unittest.TestCase):
         # En-tête avec le compte total.
         self.assertIn("2 faits", out)
 
+    def test_header_singular_for_one_fact(self):
+        write(os.path.join(self.vault, "mailing", "seul.md"),
+              fact_md("seul", "Un seul fait dans le vault"))
+        out = dg.build_digest(self.vault, today=TODAY)
+        self.assertIn("1 fait", out)
+        self.assertNotIn("1 faits", out)
+
     def test_stale_fact_marked_fresh_not(self):
         write(os.path.join(self.vault, "mailing", "vieux.md"),
               fact_md("vieux", "Fait pas revu depuis longtemps", reviewed=OLD))

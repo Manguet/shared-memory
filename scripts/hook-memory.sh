@@ -29,7 +29,7 @@ else
 fi
 
 if [ "$MODE" = "start" ]; then
-  digest="$(python3 "$HERE/digest.py" "$clone" 2>/dev/null)"
+  digest="$(timeout 5 python3 "$HERE/digest.py" "$clone" 2>/dev/null)"
   [ -n "$digest" ] && printf '%s\n' "$digest"
 fi
 
