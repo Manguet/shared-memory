@@ -293,7 +293,7 @@ function freshness(reviewed){
   const days = Math.floor((Date.now() - Date.parse(reviewed)) / 86400000);
   if(isNaN(days)) return { cls: 'todo', label: 'à vérifier', days: Infinity };
   const stale = days >= STALE_DAYS;
-  return { cls: stale ? 'stale' : 'fresh', label: (stale ? '⚠ ' : '✓ ') + 'vérifié il y a ' + days + ' j', days };
+  return { cls: stale ? 'stale' : 'fresh', label: (stale ? '⚠ ' : '✓ ') + 'vérifié il y a ' + Math.max(0, days) + ' j', days };
 }
 function isStale(f){ return freshness(f.reviewed).cls !== 'fresh'; }
 const TOKEN = DATA.token || '';
