@@ -401,3 +401,18 @@ problèmes et **corrige mécaniquement** la seule dérive sûre : un frontmatter
 Le format **canonique** d'un fait est le bloc `metadata:` imbriqué (cf. `assets/fact-template.md`,
 `docs/domain-convention.md`). Le lint converge vers ce format ; il n'invente jamais de date
 `reviewed` (dater reste un jugement, fait par `/memory-promote` à la vérification).
+
+## 14. Résolution de conflits
+
+La mémoire canonique se met à jour par `git merge` (revue). En concurrence, deux propositions
+peuvent entrer en conflit. La clé : `index/**` est **dérivé** (régénérable par `reshard.py`),
+`<domaine>/<fait>.md` est la **source**, `MEMORY.md` la **carte curée**.
+
+`scripts/resolve-conflicts.py` (`classify_conflicts` + CLI) partitionne les fichiers en conflit :
+- **`index/**`** → régénéré automatiquement (reshard) et stagé ;
+- **faits** et **`MEMORY.md`** → arbitrage humain (véracité / doublons de domaine).
+
+**Flux en deux temps** : l'outil ne régénère les index que lorsqu'il ne reste aucun conflit de
+fait/carte (reshard ne lit jamais de marqueurs de conflit) ; sinon il les liste et sort en code 1.
+Intégré à `/memory-review` (étape de fusion), avec `git merge --abort` comme échappatoire sûr.
+Aucune fusion automatique du **contenu** d'un fait : choisir entre deux versions reste un jugement.
