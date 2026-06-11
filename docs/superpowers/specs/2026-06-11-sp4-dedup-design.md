@@ -103,6 +103,6 @@ même »**) ; sinon, création directe. `vector_inactive` → pas d'avertissemen
 
 1. `embed.find_similar(text, …, threshold=0.80, exclude=None)` → pointeurs des quasi-doublons.
 2. Déclenchement à la création (import via `similar.py` ; CRUD via `POST /api/similar`).
-3. Signaler, jamais fusionner ; seuil 0,85 ; fastembed optionnel (`vector_inactive` sinon).
+3. Signaler, jamais fusionner ; seuil 0,80 ; fastembed optionnel (`vector_inactive` sinon).
 4. Plan en 2 phases (import puis CRUD).
 5. Doc + tests dans « terminé ».
