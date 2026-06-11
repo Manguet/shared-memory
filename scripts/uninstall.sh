@@ -7,8 +7,10 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh" 2>/dev/null || exit 1
 set +e +u +o pipefail
 
-# Garde-fou : $HOME doit être défini, sinon les chemins collapsent vers /.shared-memory.
-[ -n "${HOME:-}" ] || { echo "HOME non défini — abandon (chemins non fiables)." >&2; exit 1; }
+# Garde-fou : $HOME doit être défini et ≠ racine, sinon les chemins collapsent vers /.shared-memory.
+case "${HOME:-}" in
+  ""|"/") echo "HOME non défini ou racine — abandon (chemins non fiables)." >&2; exit 1 ;;
+esac
 
 SM_ROOT="$HOME/.shared-memory"
 PLUGIN_DIR="${SHARED_MEMORY_HOME:-$SM_ROOT/plugin}"

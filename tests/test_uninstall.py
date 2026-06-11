@@ -163,6 +163,13 @@ class UninstallTest(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertTrue(os.path.isdir(os.path.join(self.smroot, "plugin")))   # rien supprimé
 
+    def test_root_home_aborts_nothing_removed(self):
+        env = dict(os.environ, HOME="/", SM_REGISTRY=self.reg)
+        env.pop("SHARED_MEMORY_HOME", None)
+        r = subprocess.run(["bash", UNINSTALL, "--yes"], capture_output=True, text=True, env=env)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertTrue(os.path.isdir(os.path.join(self.smroot, "plugin")))   # rien supprimé
+
     def test_non_tty_without_yes_aborts(self):
         env = dict(os.environ, HOME=self.home, SM_REGISTRY=self.reg)
         env.pop("SHARED_MEMORY_HOME", None)
