@@ -101,3 +101,12 @@ sm_count_unpromoted() {
   done < <(git -C "$clone" status --porcelain -z 2>/dev/null)
   printf '%s' "$n"
 }
+
+# Ignore localement (par-clone, jamais committé) les faits perso d'un clone de vault.
+# Ajoute le motif `feedback_*.md` à .git/info/exclude (idempotent). Best-effort.
+sm_ensure_personal_ignore() {
+  local clone="$1" excl="$1/.git/info/exclude" pat="feedback_*.md"
+  [ -d "$clone/.git" ] || return 0
+  mkdir -p "$(dirname "$excl")"
+  grep -qxF "$pat" "$excl" 2>/dev/null || printf '%s\n' "$pat" >> "$excl"
+}

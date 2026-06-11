@@ -29,6 +29,10 @@ else
   git clone "$VAULT_URL" "$CLONE_PATH"
 fi
 
+# 1b. Ignorer localement les faits perso (jamais partagés ; par-machine).
+sm_ensure_personal_ignore "$CLONE_PATH"
+echo "Faits perso (feedback_*) ignorés localement (.git/info/exclude)."
+
 # 2. Préparer le parent du dossier mémoire.
 mkdir -p "$(dirname "$MEMORY_DIR")"
 

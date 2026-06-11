@@ -1,5 +1,7 @@
 # shared-memory
 
+[![tests](https://github.com/Manguet/shared-memory/actions/workflows/tests.yml/badge.svg)](https://github.com/Manguet/shared-memory/actions/workflows/tests.yml)
+
 Plugin Claude Code de **mémoire d'équipe partagée par projet**.
 
 Branche la mémoire native de Claude Code (`~/.claude/projects/<slug>/memory/`, locale et non
