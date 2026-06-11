@@ -17,7 +17,7 @@ doublon. La détection à la création est la prévention à la source.
 1. **Déclenchement à la création** : skill `/memory-import` **et** création CRUD du viewer.
 2. **Signaler, jamais fusionner** : on propose « mettre à jour X » ou « créer quand même » ;
    **l'humain tranche** (cohérent avec la gouvernance — pas d'action automatique).
-3. **Seuil de quasi-doublon : cosine ≥ 0.85** (constante, réglable). Assez haut pour éviter les faux
+3. **Seuil de quasi-doublon : cosine ≥ 0.80** (constante, réglable). Assez haut pour éviter les faux
    positifs (l'éval SP3 : ~0,6-0,79 pour des faits *distincts* ; un vrai doublon reformulé monte ~0,9).
 4. **Texte comparé** = `name + description + body` du candidat (même base que les embeddings, via
    `embed.fact_text`).
@@ -29,7 +29,7 @@ doublon. La détection à la création est la prévention à la source.
 Cœur réutilisable dans `embed.py`, branché à deux points de création.
 
 ```
-embed.find_similar(text, facts, store, embed_fn, threshold=0.85, k=3, exclude=None)
+embed.find_similar(text, facts, store, embed_fn, threshold=0.80, k=3, exclude=None)
   └─ embed le candidat → semantic_topk → filtre ≥ seuil, exclut `exclude` → pointeurs
 
 Branchement 1 (import) : scripts/similar.py <clone> --text … → /memory-import propose
@@ -38,7 +38,7 @@ Branchement 2 (CRUD)   : POST /api/similar (serve-viewer) → UI avertit avant d
 
 ## Cœur — `embed.find_similar`
 
-`find_similar(text, facts, store, embed_fn, threshold=0.85, k=3, exclude=None)` :
+`find_similar(text, facts, store, embed_fn, threshold=0.80, k=3, exclude=None)` :
 - `embed_fn=None` → `{"similar": [], "vector_inactive": True}` (pas de blocage).
 - sinon : `qvec = embed_fn([text])[0]` → `semantic_topk(qvec, store, k+1)` → garder les `(file, score)`
   avec `score ≥ threshold` et `file != exclude`, mapper en **pointeurs** `{file, name, path, score}`
@@ -48,7 +48,7 @@ Branchement 2 (CRUD)   : POST /api/similar (serve-viewer) → UI avertit avant d
 ## Branchement 1 — Import (`scripts/similar.py` + `/memory-import`)
 
 **`scripts/similar.py`** (CLI + cœur testable) :
-- `similar.py <vault> --text "<texte>" [--threshold 0.85] [--exclude <file>]`.
+- `similar.py <vault> --text "<texte>" [--threshold 0.80] [--exclude <file>]`.
 - Orchestration : `collect_facts(vault)` + `load_fastembed_embed_fn` + (rafraîchir le store via
   `sm_paths.store_path_for_slug` sur le slug du projet courant) + `find_similar` → imprime un JSON
   `{"similar": [...], "vector_inactive": bool}`.
@@ -101,7 +101,7 @@ même »**) ; sinon, création directe. `vector_inactive` → pas d'avertissemen
 
 ## Décisions clés (récapitulatif)
 
-1. `embed.find_similar(text, …, threshold=0.85, exclude=None)` → pointeurs des quasi-doublons.
+1. `embed.find_similar(text, …, threshold=0.80, exclude=None)` → pointeurs des quasi-doublons.
 2. Déclenchement à la création (import via `similar.py` ; CRUD via `POST /api/similar`).
 3. Signaler, jamais fusionner ; seuil 0,85 ; fastembed optionnel (`vector_inactive` sinon).
 4. Plan en 2 phases (import puis CRUD).

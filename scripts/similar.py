@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Quasi-doublons sémantiques d'un texte candidat dans un vault. Réutilise embed.find_similar.
 
-Usage : similar.py <vault> --text "<texte>" [--threshold 0.85] [--exclude <file>]
+Usage : similar.py <vault> --text "<texte>" [--threshold 0.80] [--exclude <file>]
 Imprime un JSON {"similar": [...], "vector_inactive": bool}.
 """
 import argparse
