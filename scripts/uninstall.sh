@@ -7,8 +7,17 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh" 2>/dev/null || exit 1
 set +e +u +o pipefail
 
+# Garde-fou : $HOME doit être défini, sinon les chemins collapsent vers /.shared-memory.
+[ -n "${HOME:-}" ] || { echo "HOME non défini — abandon (chemins non fiables)." >&2; exit 1; }
+
 SM_ROOT="$HOME/.shared-memory"
 PLUGIN_DIR="${SHARED_MEMORY_HOME:-$SM_ROOT/plugin}"
+
+# Garde-fou : ne jamais rm -rf un chemin vide, la racine, ou $HOME lui-même.
+case "$PLUGIN_DIR" in
+  ""|"/"|"$HOME"|"$HOME/") echo "PLUGIN_DIR douteux ($PLUGIN_DIR) — abandon." >&2; exit 1 ;;
+esac
+
 PURGE=0; YES=0
 for a in "$@"; do
   case "$a" in
@@ -27,19 +36,24 @@ else
 fi
 
 if [ "$YES" != 1 ]; then
+  if [ ! -t 0 ]; then
+    echo "Stdin n'est pas un terminal — relance avec --yes pour confirmer." >&2
+    exit 1
+  fi
   printf "Confirmer ? tape 'oui' : "
   read -r ans
   [ "$ans" = "oui" ] || { echo "Annulé."; exit 0; }
 fi
 
 # 1. Débrancher tous les projets enregistrés (retirer le symlink si c'en est un).
-for slug in $(sm_registry_slugs); do
+while IFS= read -r slug; do
+  [ -n "$slug" ] || continue
   sym="$(sm_symlink_for_slug "$slug" 2>/dev/null)"
   if [ -n "$sym" ] && [ -L "$sym" ]; then
     rm "$sym" && echo "  symlink retiré : $sym"
   fi
   sm_unregister "$slug"
-done
+done < <(sm_registry_slugs)
 echo "  projets débranchés."
 
 # 2. Retirer le plugin + caches.

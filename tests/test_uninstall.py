@@ -156,6 +156,21 @@ class UninstallTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertFalse(os.path.exists(os.path.join(self.smroot, "vaults")))
 
+    def test_empty_home_aborts_nothing_removed(self):
+        env = dict(os.environ, HOME="", SM_REGISTRY=self.reg)
+        env.pop("SHARED_MEMORY_HOME", None)
+        r = subprocess.run(["bash", UNINSTALL, "--yes"], capture_output=True, text=True, env=env)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertTrue(os.path.isdir(os.path.join(self.smroot, "plugin")))   # rien supprimé
+
+    def test_non_tty_without_yes_aborts(self):
+        env = dict(os.environ, HOME=self.home, SM_REGISTRY=self.reg)
+        env.pop("SHARED_MEMORY_HOME", None)
+        r = subprocess.run(["bash", UNINSTALL], capture_output=True, text=True,
+                           env=env, stdin=subprocess.DEVNULL)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(os.path.isdir(os.path.join(self.smroot, "plugin")))   # rien supprimé
+
 
 if __name__ == "__main__":
     unittest.main()
