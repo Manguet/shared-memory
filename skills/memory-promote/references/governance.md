@@ -39,3 +39,21 @@ déjà dans `main` ? Les faits périmés/contradictoires sont corrigés ou écar
 
 Les vibe coders produisent beaucoup de faits, dont des bancals. La revue par un référent
 empêche qu'un fait erroné devienne canonique pour toute l'équipe.
+
+## Conflits (à la fusion)
+
+`index/**` est **dérivé** (régénéré par `reshard.py`) ; `<domaine>/<fait>.md` est la **source** ;
+`MEMORY.md` est la **carte curée**. Un conflit de merge se traite donc selon le fichier :
+
+- **`index/<domaine>.md`** (cas fréquent : deux ajouts de faits au même domaine) → conflit
+  **dérivé**, résolu automatiquement en régénérant : `scripts/resolve-conflicts.py` lance reshard
+  et stage les index.
+- **`<domaine>/<fait>.md`** (deux éditions du même fait) → **humain** : choisir la bonne version
+  (véracité), `git add`.
+- **`MEMORY.md`** (deux nouveaux domaines) → **humain** : garder l'union des domaines, vérifier
+  qu'aucun ne double un domaine proche.
+
+**Flux en deux temps** : `resolve-conflicts.py` ne régénère les index que lorsqu'il ne reste
+**aucun** conflit de fait/carte (reshard ne doit jamais lire de marqueurs). Tant qu'il en reste, il
+les liste et sort en code 1 ; après résolution humaine + `git add`, relancer (code 0). En dernier
+recours, `git merge --abort` annule la fusion sans rien pousser.
