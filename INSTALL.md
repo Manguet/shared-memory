@@ -118,6 +118,7 @@ Les commandes utiles :
 |----------|-------|
 | `/memory-ui` | voir la mémoire (et le guide visuel) |
 | `/memory-lint` | valider et nettoyer le format des faits du vault (rapport + fix opt-in) |
+| `/memory-refresh` | re-vérifier les faits périmés contre le code (re-stamp / corrige / retire) |
 | `/memory-seed` | amorcer un vault vide depuis CLAUDE.md + la doc (brouillons) |
 | `/memory-list <terme>` | chercher |
 | `/memory-import` | ajouter de la doc / un fait |

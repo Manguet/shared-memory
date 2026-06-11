@@ -416,3 +416,18 @@ peuvent entrer en conflit. La clé : `index/**` est **dérivé** (régénérable
 fait/carte (reshard ne lit jamais de marqueurs de conflit) ; sinon il les liste et sort en code 1.
 Intégré à `/memory-review` (étape de fusion), avec `git merge --abort` comme échappatoire sûr.
 Aucune fusion automatique du **contenu** d'un fait : choisir entre deux versions reste un jugement.
+
+## 15. Cycle de vie des faits / re-vérification
+
+La fraîcheur **signale** (`⚠` si `reviewed` ≥ 90 j ou absent), mais signaler ne suffit pas : sans
+remédiation, le `⚠` s'accumule. `scripts/stale.py` est la **source unique** de la règle de péremption
+(`is_stale`, `days_old`, `STALE_DAYS = 90`) — réutilisée par `digest.py` (DRY) — et liste les faits
+périmés (`stale_facts`, triés du plus vieux au plus récent).
+
+`/memory-refresh` **ferme la boucle** : il liste les périmés, **confronte chaque fait
+project/reference au code actuel**, puis **re-stampe** (`set_reviewed` → `reviewed = aujourd'hui`)
+ceux encore vrais, **corrige** ou **retire** les autres. Les faits perso (`user`/`feedback`) sont
+listés à juger (pas de code à vérifier). Tout est **brouillon (étage 1)** → `/memory-promote`.
+
+Principe : **re-stamper signifie « vérifié », pas « existe »** — jamais de re-stampage en masse à
+l'aveugle ; pas d'archivage automatique (retirer un fait est une décision humaine).
