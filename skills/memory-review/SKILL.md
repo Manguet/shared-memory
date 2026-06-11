@@ -61,6 +61,21 @@ sans `gh`. La mémoire canonique ne change que par cette revue
      git -C "<clone>" push origin --delete <branche>     # nettoyage de la branche
      ```
 
+     **Si `git merge` signale un conflit**, ne pas pousser. Lancer l'outil de résolution :
+
+     ```bash
+     python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/resolve-conflicts.py "<clone>"
+     ```
+
+     - **Sortie 0** : seuls des `index/**` (dérivés) étaient en conflit ; ils ont été régénérés et
+       stagés. Finaliser : `git -C "<clone>" commit -m "memory: <résumé>"` puis
+       `git -C "<clone>" push origin main`.
+     - **Sortie 1** : de vrais conflits restent (faits à arbitrer, ou carte `MEMORY.md`). Les
+       résoudre à la main (choisir la bonne version d'un fait ; garder l'union des domaines dans la
+       carte sans doublon), `git -C "<clone>" add <fichier>`, puis **relancer** l'outil.
+     - **Échappatoire** : `git -C "<clone>" merge --abort` annule la fusion sans rien pousser ; la
+       branche `promote/*` reste intacte pour réessayer.
+
    - **Refuser / demander des corrections** : ne pas fusionner ; communiquer à l'auteur le
      fait à corriger, il relancera `/memory-promote`.
 
