@@ -151,6 +151,61 @@ def format_report(findings):
     return "\n".join(lines)
 
 
+def _normalize_frontmatter(text):
+    """Déplace `type`/`reviewed` de premier niveau sous un bloc `metadata:`.
+
+    Renvoie (new_text, changed). Préserve les autres clés de tête (name, description, …),
+    le bloc metadata existant et le corps. Idempotent : sans clé à plat, renvoie (text, False).
+    """
+    m = FM_RE.match(text)
+    if not m:
+        return text, False
+    block, body = m.group(1), m.group(2)
+    lines = block.split("\n")
+    top, meta, flat = [], [], {}
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
+        if re.match(r"^metadata\s*:", ln):
+            i += 1
+            while i < len(lines) and re.match(r"^[ \t]+\S", lines[i]):
+                meta.append(lines[i].strip())
+                i += 1
+            continue
+        mm = re.match(r"^([\w.\-]+)\s*:\s*(.*)$", ln)
+        if mm and mm.group(1) in ("type", "reviewed") and ln[:1] not in (" ", "\t"):
+            flat[mm.group(1)] = mm.group(2).strip()
+            i += 1
+            continue
+        top.append(ln)
+        i += 1
+    if not flat:
+        return text, False
+    meta_keys = {kv.split(":", 1)[0].strip() for kv in meta}
+    merged = list(meta)
+    for k in ("type", "reviewed"):
+        if k in flat and k not in meta_keys:
+            merged.append("%s: %s" % (k, flat[k]))
+    new_lines = [l for l in top if l.strip() != ""]
+    new_lines.append("metadata:")
+    new_lines.extend("  " + kv for kv in merged)
+    return "---\n" + "\n".join(new_lines) + "\n---\n" + body, True
+
+
+def apply_fixes(vault, findings):
+    """Applique uniquement les findings fixable=True (flat_frontmatter). Renvoie le nb corrigé."""
+    targets = sorted({f["file"] for f in findings
+                      if f.get("fixable") and f["rule"] == "flat_frontmatter"})
+    fixed = 0
+    for rel in targets:
+        full = os.path.join(vault, rel)
+        new_text, changed = _normalize_frontmatter(open(full, encoding="utf-8").read())
+        if changed:
+            open(full, "w", encoding="utf-8").write(new_text)
+            fixed += 1
+    return fixed
+
+
 if __name__ == "__main__":
     rest = sys.argv[1:]
     do_fix = "--fix" in rest

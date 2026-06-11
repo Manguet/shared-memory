@@ -129,5 +129,51 @@ class LintDetectionTest(unittest.TestCase):
         self.assertIn("Aucun problème", lint.format_report([]))
 
 
+FLAT = ("---\nname: vieux-fait\n"
+        "description: Un fait au format hérité à plat sans bloc metadata\n"
+        "type: project\nreviewed: 2026-06-01\n---\nCorps hérité.\n")
+
+
+class LintFixTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_apply_fixes_converts_flat_to_nested(self):
+        p = os.path.join(self.vault, "mailing", "x.md")
+        write(p, FLAT)
+        n = lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
+        self.assertEqual(n, 1)
+        out = open(p, encoding="utf-8").read()
+        self.assertIn("metadata:", out)
+        self.assertIn("  type: project", out)
+        self.assertIn("  reviewed: 2026-06-01", out)
+        self.assertNotIn("\ntype: project", out)
+        self.assertNotIn("\nreviewed: 2026-06-01", out)
+        self.assertIn("name: vieux-fait", out)
+        self.assertIn("Un fait au format hérité à plat sans bloc metadata", out)
+        self.assertIn("Corps hérité.", out)
+
+    def test_fix_is_idempotent(self):
+        p = os.path.join(self.vault, "mailing", "x.md")
+        write(p, FLAT)
+        lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
+        self.assertEqual(lint.lint_vault(self.vault), [])
+
+    def test_apply_fixes_only_touches_fixable(self):
+        p = os.path.join(self.vault, "x.md")
+        content = ("---\nname: Pas un slug\n"
+                   "description: une description assez longue pour passer le seuil\n"
+                   "metadata:\n  type: project\n  reviewed: 2026-06-01\n---\nc\n")
+        write(p, content)
+        before = open(p, encoding="utf-8").read()
+        n = lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
+        self.assertEqual(n, 0)
+        self.assertEqual(open(p, encoding="utf-8").read(), before)
+
+
 if __name__ == "__main__":
     unittest.main()
