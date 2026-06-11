@@ -35,7 +35,7 @@ def _fact_files(vault):
     """Chemins relatifs des faits (mêmes exclusions que collect_facts : MEMORY.md, index/)."""
     out = []
     for root, _dirs, files in os.walk(vault):
-        for fn in sorted(files):
+        for fn in files:
             if not fn.endswith(".md"):
                 continue
             rel = os.path.relpath(os.path.join(root, fn), vault)

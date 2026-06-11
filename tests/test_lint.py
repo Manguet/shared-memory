@@ -110,6 +110,14 @@ class LintDetectionTest(unittest.TestCase):
         self.assertIn("personal_misplaced", rules_for(findings, os.path.join("ui", "perso.md")))
         self.assertNotIn("personal_misplaced", rules_for(findings, "feedback_ok.md"))
 
+    def test_feedback_named_file_in_subdir_is_misplaced(self):
+        # un fichier feedback_*.md dans un domaine est perso (convention) -> hors racine -> signalé,
+        # même si son type est project
+        write(os.path.join(self.vault, "mailing", "feedback_bad.md"),
+              "---\nname: bad\ndescription: une description assez longue pour passer le seuil\nmetadata:\n  type: project\n  reviewed: 2026-06-01\n---\nc\n")
+        rules = rules_for(lint.lint_vault(self.vault), os.path.join("mailing", "feedback_bad.md"))
+        self.assertIn("personal_misplaced", rules)
+
     def test_format_report_groups_by_severity(self):
         write(os.path.join(self.vault, "mailing", "x.md"),
               "---\nname: x\ndescription:\nmetadata:\n  type: project\n  reviewed: 2026-06-01\n---\nc\n")
