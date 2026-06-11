@@ -95,8 +95,9 @@ def _format_list(facts):
     lines = ["Faits périmés (%d) — du plus vieux au plus récent :" % len(facts)]
     for f in facts:
         age = "jamais vérifié" if f["days_old"] >= _ABSENT else "%d j" % f["days_old"]
-        lines.append("- [%s] `%s` — %s · %s (%s)"
-                     % (age, f["name"], f["description"], f["type"], f["domain"]))
+        lines.append("- [%s] `%s` — %s · %s → %s"
+                     % (age, f["name"], f["description"], f["type"], f["file"]))
+    lines.append("(Le `→ chemin` est relatif au vault — utilisable tel quel avec --restamp.)")
     return "\n".join(lines)
 
 
