@@ -70,6 +70,13 @@ class BuildDigestTest(unittest.TestCase):
         line = next(l for l in out.splitlines() if "Aucune date de revue" in l)
         self.assertIn("⚠", line)
 
+    def test_unparseable_reviewed_is_stale(self):
+        write(os.path.join(self.vault, "mailing", "bad.md"),
+              "---\nname: bad\ndescription: Mauvaise date\nmetadata:\n  type: project\n  reviewed: not-a-date\n---\nx\n")
+        out = dg.build_digest(self.vault, today=TODAY)
+        line = next(l for l in out.splitlines() if "Mauvaise date" in l)
+        self.assertIn("⚠", line)
+
     def test_over_budget_degraded(self):
         for i in range(5):
             write(os.path.join(self.vault, "mailing", "f%d.md" % i),
