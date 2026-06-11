@@ -69,9 +69,9 @@ def set_reviewed(text, date):
         return text
     head, block, sep, body = m.group(1), m.group(2), m.group(3), m.group(4)
     lines = block.split("\n")
-    # 1) une ligne `reviewed:` indentée existe -> remplacer sa valeur
+    # 1) une ligne `reviewed:` existe (indentée ou à plat) -> remplacer sa valeur
     for i, ln in enumerate(lines):
-        mm = re.match(r"^(\s+)reviewed\s*:\s*.*$", ln)
+        mm = re.match(r"^(\s*)reviewed\s*:\s*.*$", ln)
         if mm:
             lines[i] = "%sreviewed: %s" % (mm.group(1), date)
             return head + "\n".join(lines) + sep + body
@@ -111,6 +111,9 @@ def _restamp_file(path, date):
 if __name__ == "__main__":
     argv = sys.argv[1:]
     if argv and argv[0] == "--restamp":
+        if len(argv) < 2:
+            print("Usage: stale.py --restamp <fichier> [date]", file=sys.stderr)
+            sys.exit(1)
         path = argv[1]
         date = argv[2] if len(argv) > 2 else datetime.date.today().isoformat()
         _restamp_file(path, date)

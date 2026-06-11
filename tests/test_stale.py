@@ -84,6 +84,21 @@ class SetReviewedTest(unittest.TestCase):
         self.assertIn("  type: project", out)
         self.assertIn("une description", out)
 
+    def test_flat_reviewed_updated_in_place_no_duplicate(self):
+        text = ("---\nname: x\ndescription: une description\n"
+                "type: project\nreviewed: 2026-01-01\n---\ncorps\n")
+        out = st.set_reviewed(text, "2026-06-11")
+        self.assertIn("reviewed: 2026-06-11", out)
+        self.assertEqual(out.count("reviewed:"), 1)   # pas de doublon
+        self.assertNotIn("2026-01-01", out)
+
+    def test_creates_metadata_block_when_absent(self):
+        text = "---\nname: x\ndescription: une description sans bloc metadata\n---\ncorps\n"
+        out = st.set_reviewed(text, "2026-06-11")
+        self.assertIn("metadata:", out)
+        self.assertIn("  reviewed: 2026-06-11", out)
+        self.assertIn("corps", out)
+
 
 class RestampCliTest(unittest.TestCase):
     def test_restamp_writes_date(self):
