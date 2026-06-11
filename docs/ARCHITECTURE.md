@@ -380,3 +380,24 @@ C'est **borné** (principe du sharding) : sous `max_lines` (120), digest complet
 « Patterns & Conventions » de `MEMORY.md` est jointe. Au-dessus du budget → digest **dégradé**
 (domaines + comptes + renvoi `search_memory`/`/memory-list`). **Pur lecture de fichiers, aucun
 fastembed** : marche toujours, coût borné (~2 k tokens au pire), zéro coût par message.
+
+## 13. Lint & normalisation des faits
+
+Le format d'un fait peut **dériver** dans le temps (frontmatter à plat hérité, champ requis oublié,
+date mal formée, `name` en double). `/memory-lint` (moteur `scripts/lint.py`) **détecte** ces
+problèmes et **corrige mécaniquement** la seule dérive sûre : un frontmatter à plat
+(`type:`/`reviewed:` de premier niveau) est réécrit sous un bloc **`metadata:`** canonique.
+
+- **`lint_vault(vault)`** renvoie une liste de *findings* `{file, rule, severity, fixable, message}`
+  (6 règles `error`, 7 `warn` dont une seule `fixable`). **`apply_fixes`** n'applique que les
+  findings `fixable=True` (`flat_frontmatter`), de façon **idempotente**.
+- **Rapport + fix opt-in** : le skill montre le rapport, applique la correction mécanique **après
+  confirmation**, puis régénère les index (`reshard.py`). Le reste (`name` non-slug, doublons,
+  description courte, wikilinks cassés, perso mal placé) est **signalé**, jamais réécrit — renommer
+  ou déplacer casserait les pointeurs.
+- **Garde-fou promote** : `/memory-promote` lance le lint avant le push et signale les erreurs
+  (advisory, sans blocage dur).
+
+Le format **canonique** d'un fait est le bloc `metadata:` imbriqué (cf. `assets/fact-template.md`,
+`docs/domain-convention.md`). Le lint converge vers ce format ; il n'invente jamais de date
+`reviewed` (dater reste un jugement, fait par `/memory-promote` à la vérification).

@@ -19,6 +19,23 @@ Stampée automatiquement à la **création**, à l'**édition** (viewer CRUD), e
 revérifier »** : la mémoire reste digne de confiance tant que ses faits sont datés et rafraîchis.
 Le viewer affiche un badge de fraîcheur et une vue « à revérifier ».
 
+## Format canonique d'un fait
+
+Le frontmatter **canonique** place `type` et `reviewed` sous un bloc **`metadata:`** imbriqué
+(cf. `assets/fact-template.md`) :
+
+    ---
+    name: <slug-kebab-case>
+    description: <résumé discriminant en une ligne>
+    metadata:
+      type: project        # project | reference | user | feedback
+      reviewed: AAAA-MM-JJ
+    ---
+
+Le `name` doit être un **slug kebab-case** (il sert de pointeur dans `index/**` et les wikilinks ;
+le renommer casse ces liens). Un frontmatter **à plat** (`type:`/`reviewed:` de premier niveau) est
+une forme héritée : `/memory-lint` la **détecte** et la **normalise** vers le bloc `metadata:`.
+
 ## Structure du vault
 
 ```
