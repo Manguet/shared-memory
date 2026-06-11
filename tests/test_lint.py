@@ -174,6 +174,20 @@ class LintFixTest(unittest.TestCase):
         self.assertEqual(n, 0)
         self.assertEqual(open(p, encoding="utf-8").read(), before)
 
+    def test_fix_merges_flat_key_into_existing_metadata(self):
+        # bloc metadata: partiel (type) + une clé reviewed à plat -> fusion sans doublon
+        p = os.path.join(self.vault, "x.md")
+        write(p, "---\nname: mix\n"
+                 "description: un fait avec bloc metadata partiel et une clé reviewed à plat\n"
+                 "metadata:\n  type: project\nreviewed: 2026-06-01\n---\nc\n")
+        lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
+        out = open(p, encoding="utf-8").read()
+        self.assertIn("  type: project", out)
+        self.assertIn("  reviewed: 2026-06-01", out)
+        self.assertNotIn("\nreviewed: 2026-06-01", out)   # plus de clé à plat
+        self.assertEqual(out.count("type: project"), 1)    # pas de doublon
+        self.assertEqual(lint.lint_vault(self.vault), [])   # re-lint propre
+
 
 if __name__ == "__main__":
     unittest.main()
