@@ -58,6 +58,33 @@ tout seul.
 **Véracité préservée :** le digest et la recherche **aiguillent** ; Claude **relit toujours le
 fait** (la source) avant d'affirmer. Le gain de temps ne se paie pas en approximations.
 
+### Et côté tokens ?
+
+Tout ce coût est **payé une fois au démarrage, jamais par message** — et il est **borné**. Mesure
+réelle sur un vault de **9 faits / 5 domaines** (tokenizer `cl100k` en proxy, ordre de grandeur
+représentatif) :
+
+| Artefact injecté au démarrage | tokens |
+|---|---:|
+| Digest des faits (~30–60 / fait selon la verbosité des descriptions) | ~520 |
+| Schéma de l'outil `search_memory` (MCP, **fixe**) | ~185 |
+| Rappels hook (synchro / promotion) | ~55 |
+| Carte `MEMORY.md` | ~375 *(déjà chargée nativement)* |
+| **Surcoût réel vs mémoire native** (digest + MCP + hook) | **~760** |
+| **Coût par message** | **0** |
+
+Le **plafond** (`max_lines = 120` faits) garde le démarrage borné : au-delà, le digest bascule en
+mode **dégradé** (domaines + comptes + renvoi vers la recherche), et `MEMORY.md` ne liste que des
+**domaines** — le coût **ne croît pas** avec la taille du vault. Les corps de faits ne sont **jamais**
+chargés en masse : Claude lit un fait (~100–500 tokens) **seulement quand le sujet tombe**.
+
+En face, ce surcoût remplace des dépenses **récurrentes et bien plus lourdes** : ré-expliquer le
+contexte à chaque session, faire re-découvrir à Claude ce que l'équipe sait déjà, corriger des
+affirmations sans source. Le rapport est favorable dès qu'une session réutilise **un seul** fait.
+
+> 💡 Astuce coût : des **descriptions d'une ligne** (≈ 15 mots) gardent le digest léger. La
+> `description` est l'aiguillage — pas un résumé du fait.
+
 ## La boucle de gouvernance (deux étages)
 
 Rien ne devient « officiel » sans une **revue par un référent** — la garantie qualité, surtout avec
