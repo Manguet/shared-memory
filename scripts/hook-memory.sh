@@ -28,5 +28,10 @@ else
   [ "${unpromoted:-0}" -gt 0 ] 2>/dev/null && msg+="📝 Avant de partir : ${unpromoted} fait(s) local(aux) non promu(s) — lance /memory-promote pour les partager."
 fi
 
+if [ "$MODE" = "start" ]; then
+  digest="$(timeout 5 python3 "$HERE/digest.py" "$clone" 2>/dev/null)"
+  [ -n "$digest" ] && printf '%s\n' "$digest"
+fi
+
 [ -n "$msg" ] && printf '%s\n' "$msg"
 exit 0

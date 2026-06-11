@@ -107,6 +107,24 @@ class HookScriptTest(unittest.TestCase):
             self.assertEqual(rc, 0)
             self.assertIn("/memory-promote", out)
 
+    def test_start_emits_digest_with_fact_description(self):
+        with tempfile.TemporaryDirectory() as d:
+            clone = os.path.join(d, "clone")
+            os.makedirs(clone)
+            init_repo(clone)
+            write(clone, "mailing/relance.md",
+                  "---\nname: relance\ndescription: Relancer apres trois jours\n"
+                  "metadata:\n  type: project\n  reviewed: 2026-06-01\n---\nx\n")
+            git(clone, "add", "-A")
+            git(clone, "commit", "-qm", "base")
+            reg = os.path.join(d, "registry.json")
+            with open(reg, "w") as f:
+                json.dump({"projets": [{"slug": "-tmp-proj", "clone": clone}]}, f)
+            rc, out = run_hook("start", "/tmp/proj", reg)
+            self.assertEqual(rc, 0)
+            self.assertIn("Relancer apres trois jours", out)
+            self.assertIn("Mémoire d'équipe", out)
+
     def test_end_silent_when_clean(self):
         with tempfile.TemporaryDirectory() as d:
             clone = os.path.join(d, "clone")
