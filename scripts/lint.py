@@ -199,9 +199,11 @@ def apply_fixes(vault, findings):
     fixed = 0
     for rel in targets:
         full = os.path.join(vault, rel)
-        new_text, changed = _normalize_frontmatter(open(full, encoding="utf-8").read())
+        with open(full, encoding="utf-8") as fh:
+            new_text, changed = _normalize_frontmatter(fh.read())
         if changed:
-            open(full, "w", encoding="utf-8").write(new_text)
+            with open(full, "w", encoding="utf-8") as fh:
+                fh.write(new_text)
             fixed += 1
     return fixed
 
