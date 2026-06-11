@@ -117,5 +117,45 @@ class UnlinkVaultTest(unittest.TestCase):
         self.assertIn("non branché", r.stdout)
 
 
+class UninstallTest(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.home = self._t.name
+        self.smroot = os.path.join(self.home, ".shared-memory")
+        os.makedirs(os.path.join(self.smroot, "plugin"))
+        os.makedirs(os.path.join(self.smroot, "models"))
+        os.makedirs(os.path.join(self.smroot, "vaults", "v1"))
+        self.reg = os.path.join(self.home, "registry.json")
+        self.sym = os.path.join(self.home, "memlink")
+        os.symlink(os.path.join(self.smroot, "vaults", "v1"), self.sym)
+        with open(self.reg, "w") as f:
+            json.dump({"projets": [{"slug": "-p", "symlink": self.sym,
+                                    "clone": os.path.join(self.smroot, "vaults", "v1")}]}, f)
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def _run(self, *flags):
+        env = dict(os.environ, HOME=self.home, SM_REGISTRY=self.reg)
+        env.pop("SHARED_MEMORY_HOME", None)
+        return subprocess.run(["bash", UNINSTALL, "--yes", *flags],
+                              capture_output=True, text=True, env=env)
+
+    def test_removes_plugin_and_caches_keeps_vaults(self):
+        r = self._run()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.smroot, "plugin")))
+        self.assertFalse(os.path.exists(os.path.join(self.smroot, "models")))
+        self.assertTrue(os.path.isdir(os.path.join(self.smroot, "vaults", "v1")))   # gardé
+        self.assertFalse(os.path.lexists(self.sym))   # débranché
+        with open(self.reg) as f:
+            self.assertEqual(json.load(f)["projets"], [])
+
+    def test_purge_removes_vaults(self):
+        r = self._run("--purge")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.smroot, "vaults")))
+
+
 if __name__ == "__main__":
     unittest.main()
