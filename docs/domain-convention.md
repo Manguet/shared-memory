@@ -38,6 +38,13 @@ Le `name` doit être un **slug kebab-case** (il sert de pointeur dans `index/**`
 le renommer casse ces liens). Un frontmatter **à plat** (`type:`/`reviewed:` de premier niveau) est
 une forme héritée : `/memory-lint` la **détecte** et la **normalise** vers le bloc `metadata:`.
 
+## Faits locaux (`metadata.local`)
+
+Un fait portant `metadata.local: true` dans son frontmatter est **gardé en local** : jamais proposé
+par `/memory-promote`, non compté dans « N non promu », et **ignoré par reshard** (préservé en place,
+hors `index/`). Utile pour un fait projet sensible ou pas encore prêt à être partagé. Réglable dans le
+viewer (case « fait local ») ou à la main. Retirer le drapeau le rend de nouveau partageable.
+
 ## Structure du vault
 
 ```

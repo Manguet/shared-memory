@@ -187,6 +187,11 @@ La validation se fait **en git**, sans `gh`. `/memory-promote` pousse une **bran
 proposition** (`promote/…`) ; un **référent** la relit et la **fusionne dans `main`** via
 `/memory-review`. Traçabilité et historique restent assurés par git.
 
+Un fait peut être **gardé en local** via `metadata.local: true` (jamais promu, hors index, hors
+compteur) ; `/memory-promote` propose une exclusion **ponctuelle** (cette fois) ou **durable** (pose
+le drapeau) et construit sa branche dans un **worktree propre depuis `origin/main`** pour que l'index
+poussé ne référence que les faits choisis.
+
 ```
 /memory-promote  →  branche promote/<…> + commit + push
                        │
