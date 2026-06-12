@@ -140,5 +140,32 @@ class ReviewedFieldTest(unittest.TestCase):
         self.assertEqual(by["b"]["reviewed"], "")
 
 
+class CollectFactsLocalTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_local_true_is_carried(self):
+        write(os.path.join(self.vault, "mailing", "x.md"),
+              "---\nname: x\ndescription: un fait local\nmetadata:\n  type: project\n  local: true\n---\nc")
+        facts, _ = bv.collect_facts(self.vault)
+        self.assertTrue(facts[0]["local"])
+
+    def test_absent_flag_is_false(self):
+        write(os.path.join(self.vault, "mailing", "y.md"),
+              "---\nname: y\ndescription: un fait normal\nmetadata:\n  type: project\n---\nc")
+        facts, _ = bv.collect_facts(self.vault)
+        self.assertFalse(facts[0]["local"])
+
+    def test_local_false_is_false(self):
+        write(os.path.join(self.vault, "mailing", "z.md"),
+              "---\nname: z\ndescription: explicitement partageable\nmetadata:\n  type: project\n  local: false\n---\nc")
+        facts, _ = bv.collect_facts(self.vault)
+        self.assertFalse(facts[0]["local"])
+
+
 if __name__ == "__main__":
     unittest.main()
