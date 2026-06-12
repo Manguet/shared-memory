@@ -86,8 +86,10 @@ class CountUnpromotedTest(unittest.TestCase):
         self.assertEqual(count_unpromoted(self.c), "1")
 
 
-def run_hook(mode, project_dir, registry):
+def run_hook(mode, project_dir, registry, home=None):
     env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, SM_REGISTRY=registry)
+    if home:
+        env["HOME"] = home
     r = subprocess.run(["bash", HOOK, mode], capture_output=True, text=True, env=env)
     return r.returncode, r.stdout.strip()
 
@@ -213,6 +215,65 @@ class HealthIssuesTest(unittest.TestCase):
         rc, out = health_issues(self.clone, "/tmp/proj", "0", home=self.home)
         self.assertEqual(rc, 0)
         self.assertNotEqual(out, "")
+
+
+class StartRecallTest(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.d = self._t.name
+        self.clone = os.path.join(self.d, "clone")
+        os.makedirs(self.clone)
+        init_repo(self.clone)
+        write(self.clone, "mailing/relance.md",
+              "---\nname: relance\ndescription: Relancer apres trois jours\n"
+              "metadata:\n  type: project\n  reviewed: 2026-06-01\n---\nx\n")
+        git(self.clone, "add", "-A")
+        git(self.clone, "commit", "-qm", "base")
+        self.reg = os.path.join(self.d, "registry.json")
+        with open(self.reg, "w") as f:
+            json.dump({"projets": [{"slug": "-tmp-proj", "clone": self.clone}]}, f)
+        self.home = os.path.join(self.d, "home")
+        self.memdir = os.path.join(self.home, ".claude", "projects", "-tmp-proj")
+        os.makedirs(self.memdir)
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def _wire_link(self):
+        os.symlink(self.clone, os.path.join(self.memdir, "memory"))
+
+    def test_emits_display_instruction(self):
+        self._wire_link()
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertIn("affiche", out.lower())
+
+    def test_compact_recall_present(self):
+        self._wire_link()
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertIn("Mémoire d'équipe", out)
+        self.assertIn("mailing", out)
+
+    def test_full_digest_still_in_context(self):
+        self._wire_link()
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertIn("Relancer apres trois jours", out)
+
+    def test_doctor_nudge_when_link_broken(self):
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertIn("/doctor", out)
+
+    def test_no_doctor_nudge_when_healthy(self):
+        self._wire_link()
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertNotIn("/doctor", out)
+
+    def test_no_ahead_line_without_remote(self):
+        self._wire_link()
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertNotIn("à récupérer", out)   # vault local sans remote -> pas de ligne amont
 
 
 if __name__ == "__main__":
