@@ -19,6 +19,41 @@ sm_memory_dir() {
   printf '%s' "$HOME/.claude/projects/$slug/memory"
 }
 
+# Problèmes de configuration d'un projet branché (best-effort, lecture seule).
+# Args: $1=clone  $2=project_dir  $3=pull_failed(0|1)
+# Imprime un libellé de problème par ligne ; rien si tout va bien. Sort toujours 0.
+sm_health_issues() {
+  local clone="$1" project_dir="$2" pull_failed="${3:-0}"
+  command -v git     >/dev/null 2>&1 || printf '%s\n' "git introuvable dans le PATH"
+  command -v python3 >/dev/null 2>&1 || printf '%s\n' "python3 introuvable dans le PATH"
+
+  if [ -z "$clone" ] || [ ! -d "$clone/.git" ]; then
+    printf '%s\n' "clone du vault introuvable ou non versionné (git)"
+  else
+    local mem real_mem real_clone
+    mem="$(sm_memory_dir "$project_dir")"
+    if [ ! -e "$mem" ]; then
+      printf '%s\n' "lien mémoire absent (projet non câblé)"
+    else
+      real_mem="$(cd "$mem" 2>/dev/null && pwd -P)"
+      real_clone="$(cd "$clone" 2>/dev/null && pwd -P)"
+      if [ -z "$real_mem" ] || [ -z "$real_clone" ]; then
+        printf '%s\n' "lien mémoire ne pointe pas vers le clone du vault"
+      else
+        case "$real_mem" in
+          "$real_clone"|"$real_clone"/*) : ;;
+          *) printf '%s\n' "lien mémoire ne pointe pas vers le clone du vault" ;;
+        esac
+      fi
+    fi
+  fi
+
+  if [ "$pull_failed" = "1" ]; then
+    printf '%s\n' "échec de la synchro git (pull)"
+  fi
+  return 0
+}
+
 # Ouvre une URL ou un fichier dans le navigateur (mac, WSL2, Linux). Silencieux si aucun
 # ouvreur n'est dispo (renvoie 1) — l'appelant affiche alors un lien cliquable.
 sm_open() {

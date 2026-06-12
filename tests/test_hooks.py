@@ -34,6 +34,17 @@ def count_unpromoted(clone):
     return r.stdout.strip()
 
 
+def health_issues(clone, project_dir, pull_failed="0", home=None):
+    env = dict(os.environ)
+    if home:
+        env["HOME"] = home
+    r = subprocess.run(
+        ["bash", "-c", 'source "$1"; sm_health_issues "$2" "$3" "$4"',
+         "_", LIB, clone, project_dir, pull_failed],
+        capture_output=True, text=True, env=env)
+    return r.returncode, r.stdout.strip()
+
+
 class CountUnpromotedTest(unittest.TestCase):
     def setUp(self):
         self._t = tempfile.TemporaryDirectory()
@@ -153,6 +164,55 @@ class PluginHooksTest(unittest.TestCase):
         self.assertIn("hook-memory.sh", end)
         self.assertIn("end", end)
         self.assertIn("CLAUDE_PLUGIN_ROOT", start)
+
+
+class HealthIssuesTest(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.d = self._t.name
+        self.clone = os.path.join(self.d, "clone")
+        os.makedirs(self.clone)
+        init_repo(self.clone)
+        self.home = os.path.join(self.d, "home")
+        self.memdir = os.path.join(self.home, ".claude", "projects", "-tmp-proj")
+        os.makedirs(self.memdir)
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def _wire_link(self):
+        os.symlink(self.clone, os.path.join(self.memdir, "memory"))
+
+    def test_silent_when_healthy(self):
+        self._wire_link()
+        rc, out = health_issues(self.clone, "/tmp/proj", "0", home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "")
+
+    def test_flags_missing_clone(self):
+        self._wire_link()
+        rc, out = health_issues(os.path.join(self.d, "nope"), "/tmp/proj", "0", home=self.home)
+        self.assertNotEqual(out, "")
+
+    def test_flags_unwired_memory_link(self):
+        rc, out = health_issues(self.clone, "/tmp/proj", "0", home=self.home)
+        self.assertNotEqual(out, "")
+
+    def test_flags_pull_failure(self):
+        self._wire_link()
+        rc, out = health_issues(self.clone, "/tmp/proj", "1", home=self.home)
+        self.assertNotEqual(out, "")
+
+    def test_flags_broken_symlink(self):
+        # symlink créé puis cible supprimée -> lien cassé -> signalé
+        import shutil
+        target = os.path.join(self.d, "disparu")
+        os.makedirs(target)
+        os.symlink(target, os.path.join(self.memdir, "memory"))
+        shutil.rmtree(target)
+        rc, out = health_issues(self.clone, "/tmp/proj", "0", home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertNotEqual(out, "")
 
 
 if __name__ == "__main__":
