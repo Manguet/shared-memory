@@ -29,7 +29,7 @@ ahead=0
 if git -C "$clone" remote get-url origin >/dev/null 2>&1; then     # ne pull / compte l'amont QUE si un remote existe
   has_remote=1
   GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$clone" pull --ff-only >/dev/null 2>&1 || pull_failed=1
-  ahead="$(git -C "$clone" rev-list --count HEAD..origin/main 2>/dev/null || printf 0)"
+  ahead="$(git -C "$clone" rev-list --count HEAD..origin/HEAD 2>/dev/null || printf 0)"
 fi
 
 summary="$(timeout 5 python3 "$HERE/digest.py" --summary "$clone" 2>/dev/null)"

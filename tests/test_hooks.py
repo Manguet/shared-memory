@@ -248,6 +248,16 @@ class StartRecallTest(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn("affiche", out.lower())
 
+    def test_promote_nudge_when_unpromoted(self):
+        self._wire_link()
+        # fait non commité -> unpromoted = 1 -> le rappel doit pousser /memory-promote
+        write(self.clone, "mailing/nouveau.md",
+              "---\nname: nouveau\ndescription: Un fait non promu\n"
+              "metadata:\n  type: project\n  reviewed: 2026-06-01\n---\nx\n")
+        rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
+        self.assertEqual(rc, 0)
+        self.assertIn("/memory-promote", out)
+
     def test_compact_recall_present(self):
         self._wire_link()
         rc, out = run_hook("start", "/tmp/proj", self.reg, home=self.home)
