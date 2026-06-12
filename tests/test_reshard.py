@@ -239,5 +239,67 @@ class ReshardMemoryTest(unittest.TestCase):
             self.assertIn("- mailing (3 faits) → index/mailing.md", mem)
 
 
+class ReshardSafetyTest(unittest.TestCase):
+    """L'invariant anti perte de données : aucun fait d'origine n'est supprimé tant que la
+    nouvelle structure n'a pas été écrite intégralement. Si une écriture échoue en cours de
+    route, le vault doit rester intact et utilisable, et aucun staging ne doit subsister."""
+
+    def _snapshot(self, vault, names):
+        return {n: Path(os.path.join(vault, "mailing", n)).read_text(encoding="utf-8")
+                for n in names}
+
+    def test_original_facts_survive_write_failure(self):
+        with tempfile.TemporaryDirectory() as v:
+            # Assez de faits (n=2) pour que reshard écrive plusieurs fichiers (faits + index).
+            names = ["f%d.md" % i for i in range(7)]
+            for n in names:
+                write_fact(v, "mailing/" + n, n[:-3])
+            before = self._snapshot(v, names)
+
+            # Injecte un échec : la 3e écriture (open en mode 'w') lève -> staging incomplet.
+            import builtins
+            real_open = getattr(R, "open", builtins.open)
+            calls = {"n": 0}
+
+            def flaky_open(*args, **kwargs):
+                mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+                if "w" in mode:
+                    calls["n"] += 1
+                    if calls["n"] == 3:
+                        raise OSError("disque plein simulé")
+                return real_open(*args, **kwargs)
+
+            had_open = hasattr(R, "open")
+            R.open = flaky_open
+            try:
+                with self.assertRaises(OSError):
+                    R.reshard(v, max_entries=2)
+            finally:
+                if had_open:
+                    R.open = real_open
+                else:
+                    del R.open
+
+            # 1) Tous les faits d'origine existent encore, contenu identique : zéro perte.
+            after = self._snapshot(v, names)
+            self.assertEqual(after, before)
+            # 2) Aucun staging laissé derrière.
+            self.assertFalse(os.path.isdir(os.path.join(v, R.STAGING_DIRNAME)))
+            # 3) Vault toujours utilisable : un reshard normal réussit ensuite.
+            R.reshard(v, max_entries=2)
+            self.assertEqual(len(md_files_under(os.path.join(v, "mailing"))), 7)
+
+    def test_no_staging_dir_left_after_normal_run(self):
+        with tempfile.TemporaryDirectory() as v:
+            for i in range(7):
+                write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
+            R.reshard(v, max_entries=2)
+            self.assertFalse(os.path.isdir(os.path.join(v, R.STAGING_DIRNAME)))
+            # Tous les contenus de faits sont présents après reshard.
+            bodies = [Path(p).read_text(encoding="utf-8")
+                      for p in md_files_under(os.path.join(v, "mailing"))]
+            self.assertEqual(len(bodies), 7)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -50,6 +50,7 @@ def collect_facts(vault, include_body=True):
     """
     facts, index_body = [], ""
     for root, _dirs, files in os.walk(vault):
+        _dirs[:] = [d for d in _dirs if d != ".reshard-staging"]  # staging reshard -> jamais un fait
         for fn in sorted(files):
             if not fn.endswith(".md"):
                 continue

@@ -10,6 +10,8 @@ import math
 import os
 import shutil
 
+STAGING_DIRNAME = ".reshard-staging"
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _SPEC = importlib.util.spec_from_file_location(
     "build_viewer", os.path.join(_HERE, "build-viewer.py"))
@@ -98,9 +100,8 @@ def _materialize(node, segments):
     return placements, indexes
 
 
-def _write_index(vault, seg, kind, entries):
-    path = os.path.join(vault, "index", seg + ".md")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+def _index_relpath_content(seg, kind, entries):
+    """Renvoie (relpath, content) pour un fichier index/<seg>.md (chemin relatif au vault)."""
     lines = ["# %s" % seg, ""]
     if kind == "leaf":
         for _, name, desc, typ, rel in entries:
@@ -108,8 +109,7 @@ def _write_index(vault, seg, kind, entries):
     else:
         for _, label, count, child_seg in entries:
             lines.append("- %s (%d faits) → index/%s.md" % (label, count, child_seg))
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+    return (os.path.join("index", seg + ".md"), "\n".join(lines) + "\n")
 
 
 def _ensure_memory(vault, domain_counts):
@@ -128,36 +128,80 @@ def _ensure_memory(vault, domain_counts):
         f.write("\n".join(lines) + "\n")
 
 
-def reshard(vault, max_entries=DEFAULT_MAX):
-    """Applique l'invariant ≤ max_entries par dossier ; régénère `index/**`.
-    PRÉSERVE la carte `MEMORY.md` curée (ne la crée que si absente). Idempotent.
-    Renvoie {domaine: nb_faits}."""
+def _plan_layout(vault, max_entries):
+    """Construit en mémoire la TOTALITÉ de la nouvelle structure sans rien écrire.
+    Renvoie (files, counts, reloc) où :
+      - files  : [(relpath, content)] des faits shardés ET des fichiers index/** ;
+      - counts : {domaine: nb_faits} ;
+      - reloc  : [(relpath_racine, content)] des faits perso égarés à reloger en racine
+                 (seulement ceux dont la cible n'existe pas encore)."""
     by_domain, perso = _domain_facts(vault)
-    all_placements, all_indexes, counts = [], [], {}
+    files, counts = [], {}
     for domain, facts in sorted(by_domain.items()):
         names = [f["name"] for f in facts]
         if len(names) != len(set(names)):
             raise ValueError("noms en double dans le domaine %s" % domain)
         tree = split_tree(facts, max_entries)
         placements, indexes = _materialize(tree, [domain])
-        all_placements.extend(placements)
-        all_indexes.extend(indexes)
+        files.extend(placements)
+        for seg, kind, entries in indexes:
+            files.append(_index_relpath_content(seg, kind, entries))
         counts[domain] = len(facts)
-    for domain in by_domain:
-        shutil.rmtree(os.path.join(vault, domain), ignore_errors=True)
-    shutil.rmtree(os.path.join(vault, "index"), ignore_errors=True)
+    reloc = []
     for fa in perso:                        # reloger les faits perso égarés à la racine
-        dest = os.path.join(vault, fa["name"] + ".md")
-        if not os.path.exists(dest):
-            with open(dest, "w", encoding="utf-8") as f:
-                f.write(fa["raw"])
-    for rel, raw in all_placements:
-        dest = os.path.join(vault, rel)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        rel = fa["name"] + ".md"
+        if not os.path.exists(os.path.join(vault, rel)):
+            reloc.append((rel, fa["raw"]))
+    return files, counts, reloc
+
+
+def _write_all(root, items):
+    """Écrit chaque (relpath, content) sous `root` (crée les dossiers). Lève si une écriture échoue."""
+    for rel, content in items:
+        dest = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(dest) or root, exist_ok=True)
         with open(dest, "w", encoding="utf-8") as f:
-            f.write(raw)
-    for seg, kind, entries in all_indexes:
-        _write_index(vault, seg, kind, entries)
+            f.write(content)
+
+
+def reshard(vault, max_entries=DEFAULT_MAX):
+    """Applique l'invariant ≤ max_entries par dossier ; régénère `index/**`.
+    PRÉSERVE la carte `MEMORY.md` curée (ne la crée que si absente). Idempotent.
+
+    Sûreté anti perte de données : la nouvelle structure complète (faits shardés +
+    `index/**`) est d'abord écrite dans un dossier de staging à l'intérieur du vault.
+    Tant que TOUTES les écritures n'ont pas réussi, AUCUN fait d'origine n'est supprimé.
+    Si une écriture échoue, le staging est jeté et le vault reste intact. Ce n'est qu'une
+    fois le staging complet que l'on supprime l'ancienne structure puis qu'on bascule
+    le staged en place. Le staging est toujours nettoyé (succès ou échec).
+    Renvoie {domaine: nb_faits}."""
+    files, counts, reloc = _plan_layout(vault, max_entries)
+
+    staging = os.path.join(vault, STAGING_DIRNAME)
+    shutil.rmtree(staging, ignore_errors=True)        # reste éventuel d'un run interrompu
+    try:
+        os.makedirs(staging)
+        # 1) Écrire TOUTE la nouvelle structure dans le staging (si ça échoue, vault intact).
+        _write_all(staging, files)
+        # 2) Tout est écrit -> on peut maintenant supprimer l'ancienne structure...
+        for domain in counts:
+            shutil.rmtree(os.path.join(vault, domain), ignore_errors=True)
+        shutil.rmtree(os.path.join(vault, "index"), ignore_errors=True)
+        # ... puis basculer le staged en place.
+        for rel, _content in files:
+            src = os.path.join(staging, rel)
+            dest = os.path.join(vault, rel)
+            os.makedirs(os.path.dirname(dest) or vault, exist_ok=True)
+            shutil.move(src, dest)
+        # 3) Reloger les faits perso égarés à la racine (cibles inexistantes uniquement).
+        for rel, content in reloc:
+            dest = os.path.join(vault, rel)
+            if not os.path.exists(dest):
+                with open(dest, "w", encoding="utf-8") as f:
+                    f.write(content)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)    # toujours nettoyer le staging
+
     _ensure_memory(vault, counts)
     return counts
 
