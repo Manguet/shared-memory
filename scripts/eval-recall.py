@@ -49,7 +49,7 @@ def eval_cases(cases, query_fn, k):
     rank1 = 0
     misses = []
     for c in cases:
-        ranked = query_fn(c["query"])
+        ranked = query_fn(c["query"])[:k]   # fenêtre top-k : MRR cohérent avec recall@k
         expected = c["expect"]
         rr = reciprocal_rank(ranked, expected)
         rr_sum += rr
@@ -85,7 +85,8 @@ def auto_cases(facts):
 def _format_report(report, k, vector_inactive):
     lines = []
     if vector_inactive:
-        lines.append("⚠ fastembed absent — recall mesuré en lexical (grep), proxy faible ; "
+        lines.append("⚠ fastembed absent — recall mesuré en lexical (grep), proxy faible "
+                     "(MRR/rang #1 non significatifs en grep) ; "
                      "lance /memory-doctor pour l'éval sémantique.")
     mode = "grep (proxy faible)" if vector_inactive else "sémantique"
     lines.append("Éval rappel — %d cas, k=%d, mode %s" % (report["n"], k, mode))
