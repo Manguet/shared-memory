@@ -61,6 +61,8 @@ def write(clone, rel, content):
 
 def init_repo(clone):
     git(clone, "init", "-q")
+    # Branche par défaut = main (un runner CI peut défaulter sur master) — avant le 1er commit.
+    git(clone, "symbolic-ref", "HEAD", "refs/heads/main")
     git(clone, "config", "user.email", "t@t")
     git(clone, "config", "user.name", "t")
 
