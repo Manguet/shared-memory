@@ -94,8 +94,26 @@ def build_digest(vault, max_lines=120, today=None):
     return "\n".join(lines)
 
 
+def build_summary(vault, max_domains=6):
+    """Ligne unique « N faits (domaine1, domaine2, …) » pour le rappel compact du hook.
+
+    Réutilise collect_facts ; vault vide -> "". Tronque au-delà de max_domains avec « … »."""
+    facts, _ = _bv.collect_facts(vault, include_body=False)
+    n = len(facts)
+    if n == 0:
+        return ""
+    domains = sorted({f["domain"] for f in facts})
+    shown = domains[:max_domains]
+    if len(domains) > max_domains:
+        shown.append("…")
+    return "%s (%s)" % (_count(n, "fait"), ", ".join(shown))
+
+
 if __name__ == "__main__":
-    vault = sys.argv[1] if len(sys.argv) > 1 else "."
-    out = build_digest(vault)
+    args = sys.argv[1:]
+    summary = "--summary" in args
+    rest = [a for a in args if a != "--summary"]
+    vault = rest[0] if rest else "."
+    out = build_summary(vault) if summary else build_digest(vault)
     if out:
         print(out)

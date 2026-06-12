@@ -110,5 +110,45 @@ class BuildDigestTest(unittest.TestCase):
         self.assertIn("Toujours dater les faits", out)
 
 
+class BuildSummaryTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_empty_vault_returns_empty(self):
+        self.assertEqual(dg.build_summary(self.vault), "")
+
+    def test_one_line_count_and_domains(self):
+        write(os.path.join(self.vault, "mailing", "a.md"), fact_md("a", "desc a"))
+        write(os.path.join(self.vault, "facturation", "b.md"), fact_md("b", "desc b"))
+        out = dg.build_summary(self.vault)
+        self.assertNotIn("\n", out)
+        self.assertIn("2 faits", out)
+        self.assertIn("mailing", out)
+        self.assertIn("facturation", out)
+
+    def test_singular_for_one_fact(self):
+        write(os.path.join(self.vault, "mailing", "seul.md"), fact_md("seul", "x"))
+        out = dg.build_summary(self.vault)
+        self.assertIn("1 fait", out)
+        self.assertNotIn("1 faits", out)
+
+    def test_truncates_beyond_max_domains(self):
+        for i in range(8):
+            write(os.path.join(self.vault, "dom%d" % i, "f.md"), fact_md("f%d" % i, "x"))
+        out = dg.build_summary(self.vault, max_domains=6)
+        self.assertIn("…", out)
+        self.assertIn("8 faits", out)
+        self.assertIn("dom0", out)   # le 1er domaine trié reste affiché
+
+    def test_domain_with_underscore(self):
+        write(os.path.join(self.vault, "feedback_style", "f.md"), fact_md("f", "x"))
+        out = dg.build_summary(self.vault)
+        self.assertIn("feedback_style", out)
+
+
 if __name__ == "__main__":
     unittest.main()
