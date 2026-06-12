@@ -7,4 +7,5 @@ metadata:
 ---
 
 <Le fait, concis et autonome. Un seul fait par fichier.
-Lier les faits connexes via [[autre-slug]].>
+Lier les faits connexes via [[autre-slug]].
+type : project | reference (partagés) · user | feedback (perso, jamais partagés).>
