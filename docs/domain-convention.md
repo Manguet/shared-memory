@@ -107,6 +107,26 @@ python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<vault>" [--max-entries 150]
 Les sous-domaines créés portent des labels mécaniques (`part-01`…) ; **un humain peut les renommer**
 en libellés signifiants ensuite (reshard ne re-brasse pas un sous-arbre resté sous le seuil).
 
+### Sous-domaines : sémantiques vs mécaniques
+
+Un domaine peut contenir des **sous-domaines sémantiques** — des dossiers que tu nommes
+(`mailing/transactionnel`) pour organiser le sens. Ils sont **préservés** par `reshard` (jamais
+aplatis).
+
+À côté, `reshard` crée des sous-dossiers **mécaniques** `part-NN` (`part-01`, `part-02`…)
+**uniquement** quand les **faits directs** d'un dossier dépassent le seuil (~150), pour garder
+l'index lisible. **`part-NN` est un nom réservé** (interdit comme nom de domaine ; le formulaire et
+l'API le refusent).
+
+**Hybride** : les deux coexistent — un dossier peut avoir des sous-domaines nommés *et* des `part-NN`
+pour ses faits directs en surnombre (ex. `mailing/` → `transactionnel/`, `part-01/`, `part-02/`).
+Le **domaine sémantique** d'un fait est son chemin de dossiers *moins les segments `part-NN`*.
+
+> Le seuil borne le nombre de **faits directs** d'un dossier (le découpage mécanique). Les
+> sous-domaines **sémantiques** ne sont jamais re-bucketés : ils sont nommés exprès. Un index peut
+> donc lister plusieurs nœuds (sous-domaines + `part-NN`) — ce sont des pointeurs compacts, pas des
+> faits. Un fait ne peut pas porter le même nom qu'un sous-domaine frère (refusé).
+
 ## Format d'une ligne de sous-index
 
 Une ligne par fait, dans `index/<domaine>.md` :

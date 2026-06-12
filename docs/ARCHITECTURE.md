@@ -338,6 +338,13 @@ gros est scindé récursivement en sous-domaines (`part-xx`), tous les `index/**
 **Idempotent** et **préserve** la carte `MEMORY.md` curée (intro, « Patterns & Conventions »).
 Appelé par `/memory-import` et `/memory-promote` (filet de sécurité de lisibilité).
 
+**Sous-domaines sémantiques** : `reshard` reconnaît les dossiers nommés par l'humain
+(`mailing/transactionnel`) et les **préserve** ; il n'applique le découpage mécanique `part-NN` que
+sur les **faits directs** d'un dossier qui dépassent le seuil (hybride). `part-NN` est un nom réservé.
+Le domaine d'un fait = son chemin moins les segments `part-NN`. Le formulaire du viewer propose les
+sous-domaines existants (combobox autocomplete) et permet d'en créer ; un fait homonyme d'un
+sous-domaine frère est refusé.
+
 ### `/memory-doctor` — pas de dégradation silencieuse
 `scripts/doctor.py` diagnostique les prérequis de la recherche (python, `fastembed`, modèle,
 `.mcp.json`) avec un **remède** par manque ; le skill présente le diagnostic et **propose** les
