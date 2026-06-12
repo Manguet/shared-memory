@@ -57,15 +57,21 @@ def _semantic_segments(path):
 
 
 def _semantic_tree(vault):
-    """Arbre des dossiers sémantiques. Renvoie (root, perso).
+    """Arbre des dossiers sémantiques. Renvoie (root, perso, local).
     root : {domaine: node} ; node = {'facts': [...], 'children': {nom: node}}.
-    Les faits perso (user/feedback) égarés en domaine sont renvoyés à part (relogés en racine)."""
+    perso : faits user/feedback égarés en domaine (relogés en racine).
+    local : [(relpath, raw)] des faits `metadata.local: true` — passthrough : réécrits à leur
+            place, hors arbre/index/seuil (sinon le rmtree(vault/<domaine>) les détruirait)."""
     facts, _ = bv.collect_facts(vault, include_body=False)
-    root, perso = {}, []
+    root, perso, local = {}, [], []
     for fa in facts:
+        if fa.get("local"):        # fait local (racine ou domaine) : passthrough, hors arbre/index/seuil
+            local.append((fa["file"], _read_raw(os.path.join(vault, fa["file"]))))
+            continue
         if not fa["path"]:
             continue
-        fa = dict(fa, raw=_read_raw(os.path.join(vault, fa["file"])))
+        raw = _read_raw(os.path.join(vault, fa["file"]))
+        fa = dict(fa, raw=raw)
         if fa["type"] in ("user", "feedback"):
             perso.append(fa)
             continue
@@ -78,7 +84,7 @@ def _semantic_tree(vault):
             node = children.setdefault(s, {"facts": [], "children": {}})
             children = node["children"]
         node["facts"].append(fa)
-    return root, perso
+    return root, perso, local
 
 
 def _count_node_facts(node):
@@ -192,7 +198,7 @@ def _plan_layout(vault, max_entries):
       - counts : {domaine: nb_faits} ;
       - reloc  : [(relpath_racine, content)] des faits perso égarés à reloger en racine
                  (seulement ceux dont la cible n'existe pas encore)."""
-    root, perso = _semantic_tree(vault)
+    root, perso, local = _semantic_tree(vault)
     files, counts = [], {}
     for domain in sorted(root):
         placements, indexes = _materialize_semantic(root[domain], [domain], max_entries)
@@ -200,6 +206,11 @@ def _plan_layout(vault, max_entries):
         for seg, entries in indexes:
             files.append(_index_relpath_content(seg, entries))
         counts[domain] = _count_node_facts(root[domain])
+    placed = {rel for rel, _ in files}
+    for rel, _raw in local:
+        if rel in placed:
+            raise ValueError("collision : le fait local « %s » entre en conflit avec un fait placé" % rel)
+    files.extend(local)        # faits locaux : réécrits à leur chemin d'origine, hors index/counts
     reloc = []
     for fa in perso:
         rel = fa["name"] + ".md"
