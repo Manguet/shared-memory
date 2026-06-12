@@ -100,9 +100,10 @@ def _format_report(report, k, vector_inactive):
 
 
 def search_query_fn(vault, k=8, embed_fn="auto"):
-    """Renvoie (query_fn, vector_inactive) basé sur le VRAI chemin de recherche (embed.search).
+    """Renvoie (query_fn, vector_inactive, facts) basé sur le VRAI chemin de recherche (embed.search).
 
-    `embed_fn="auto"` charge fastembed si dispo (None -> repli grep). Injectable pour les tests."""
+    `embed_fn="auto"` charge fastembed si dispo (None -> repli grep). Injectable pour les tests.
+    `facts` (chargés une fois) sont renvoyés pour éviter une relecture du vault (auto_cases)."""
     facts, _ = _bv.collect_facts(vault, include_body=True)
     if embed_fn == "auto":
         embed_fn = _embed.load_fastembed_embed_fn()
@@ -118,7 +119,7 @@ def search_query_fn(vault, k=8, embed_fn="auto"):
         res = _embed.search(query, facts, store, embed_fn, k)
         return [r["name"] for r in res["results"]]
 
-    return query_fn, vector_inactive
+    return query_fn, vector_inactive, facts
 
 
 if __name__ == "__main__":
@@ -135,12 +136,11 @@ if __name__ == "__main__":
         else:
             positional.append(argv[i]); i += 1
     vault = positional[0] if positional else "."
-    query_fn, vector_inactive = search_query_fn(vault, k)
+    query_fn, vector_inactive, facts = search_query_fn(vault, k)
     if cases_file:
         with open(cases_file, encoding="utf-8") as fh:
             cases = json.load(fh)
     else:
-        facts, _ = _bv.collect_facts(vault, include_body=False)
         cases = auto_cases(facts)
     report = eval_cases(cases, query_fn, k)
     print(_format_report(report, k, vector_inactive))
