@@ -295,7 +295,7 @@
 const DATA = /*__DATA__*/;
 const TYPES = ["project", "reference", "feedback", "user"];
 const COLOR = { project: "var(--project)", reference: "var(--reference)", feedback: "var(--feedback)", user: "var(--user)" };
-const state = { view: "home", factId: null, query: "", types: new Set(TYPES), usageStep: 0 };
+const state = { view: "home", factId: null, query: "", types: new Set(TYPES), localOnly: false, usageStep: 0 };
 const $ = id => document.getElementById(id);
 const STALE_DAYS = 90;
 function freshness(reviewed){
@@ -373,7 +373,7 @@ function md(s){ return esc(s)
   .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
 function hl(s, q){ if(!q) return esc(s); const i = s.toLowerCase().indexOf(q.toLowerCase());
   if(i<0) return esc(s); return esc(s.slice(0,i))+'<mark>'+esc(s.slice(i,i+q.length))+'</mark>'+esc(s.slice(i+q.length)); }
-function visible(){ return DATA.facts.filter(f => state.types.has(f.type)); }
+function visible(){ return DATA.facts.filter(f => state.types.has(f.type) && (!state.localOnly || f.local)); }
 function matches(q){ q = q.toLowerCase(); return visible().filter(f =>
   (f.name + f.description).toLowerCase().includes(q)); }
 function factByFile(file){ return DATA.facts.find(f => f.file === file); }
@@ -392,6 +392,14 @@ function renderFilters(){
     c.onclick = () => { state.types.has(t) ? state.types.delete(t) : state.types.add(t); rebuildNav(); update(); };
     el.appendChild(c);
   });
+  const nLoc = DATA.facts.filter(f => f.local).length;
+  if(nLoc){
+    const c = document.createElement('span');
+    c.className = 'chip' + (state.localOnly ? '' : ' off');   // actif = mis en avant ; inactif = .off (estompé)
+    c.innerHTML = `<span class="dot" style="background:var(--faint)"></span>locaux ${nLoc}`;
+    c.onclick = () => { state.localOnly = !state.localOnly; rebuildNav(); update(); };
+    el.appendChild(c);
+  }
 }
 
 /* ---------- sidebar : arbre récursif sur f.path[], lazy-render ---------- */
