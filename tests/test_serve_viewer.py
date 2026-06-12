@@ -390,6 +390,12 @@ class TemplateLocalUITest(unittest.TestCase):
         self.assertIn("e-local", html)      # case à cocher édition
         self.assertIn("localBadge", html)   # helper de rendu du badge
 
+    def test_template_has_local_filter(self):
+        tmpl = os.path.join(os.path.dirname(__file__), "..", "assets", "viewer-template.html")
+        with open(tmpl, encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn("localOnly", html)
+
 
 class ViewerGuideTest(unittest.TestCase):
     """Garde-fou anti-dérive : le viewer doit mentionner chaque skill memory-*."""
