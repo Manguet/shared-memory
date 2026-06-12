@@ -451,11 +451,12 @@ function renderNav(){
 
 /* ---------- main views ---------- */
 function badge(t){ return `<span class="badge" style="color:${COLOR[t]}">${t}</span>`; }
+function localBadge(f){ return f.local ? `<span class="fresh-badge todo" title="non partagé">local</span>` : ''; }
 
 function showFact(f){
   $('main').innerHTML = `<div class="card detail">
     <div class="fhead">${badge(f.type)}<span class="fname">${esc(f.name)}</span>
-      <span class="fresh-badge ${freshness(f.reviewed).cls}">${esc(freshness(f.reviewed).label)}</span>
+      <span class="fresh-badge ${freshness(f.reviewed).cls}">${esc(freshness(f.reviewed).label)}</span>${localBadge(f)}
       <span style="margin-left:auto;display:flex;gap:8px">
         <button class="btn" id="f-edit">éditer</button>
         <button class="btn" id="f-del">supprimer</button></span></div>
@@ -496,6 +497,7 @@ function editFact(f){
       <label>nom (slug)</label><input id="e-name" value="${esc(f.name)}" oninput="this.value=slugify(this.value)">
       <label>description</label><input id="e-desc" value="${esc(f.description||'')}">
       <label>type</label><select id="e-type">${['project','reference','user','feedback'].map(t=>`<option value="${t}"${t===f.type?' selected':''}>${t}</option>`).join('')}</select>
+      <label><input type="checkbox" id="e-local" ${f.local ? 'checked' : ''}> fait local (ne pas partager)</label>
       <label>domaine</label><div class="combo"><input id="e-domain" value="${esc((f.path||[]).filter(s=>!isPart(s)).join('/'))}" autocomplete="off"><div id="e-domain-pop" class="combo-pop hidden"></div></div>
       <label>contenu</label><textarea id="e-body">${esc(body.trim())}</textarea>
     </div>
@@ -507,7 +509,7 @@ function editFact(f){
     try {
       const meta = await api('PUT', '/api/fact?f=' + encodeURIComponent(f.file),
         { name:$('e-name').value.trim(), description:$('e-desc').value.trim(),
-          type:$('e-type').value, body:$('e-body').value, domain:$('e-domain').value.trim().replace(/^\/+|\/+$/g,'') });
+          type:$('e-type').value, body:$('e-body').value, domain:$('e-domain').value.trim().replace(/^\/+|\/+$/g,''), local: $('e-local').checked });
       applyMeta(meta);
       const dom = $('e-domain').value.trim().replace(/^\/+|\/+$/g,''), ty = $('e-type').value, nm = $('e-name').value.trim();
       state.factId = (dom && ty!=='user' && ty!=='feedback') ? dom+'/'+nm+'.md' : nm+'.md';
@@ -528,7 +530,7 @@ function viewResults(q){
     ? `<div class="empty">Aucun fait (nom/description) ne correspond à « ${esc(q)} ».</div>`
     : `<div class="results">` + shown.map(f => `
         <button class="result" data-file="${esc(f.file)}">
-          <div class="rh">${badge(f.type)}<span class="rn">${hl(f.name,q)}</span></div>
+          <div class="rh">${badge(f.type)}<span class="rn">${hl(f.name,q)}</span>${localBadge(f)}</div>
           <div class="rd">${f.description ? hl(f.description,q) : esc(f.file)}</div>
         </button>`).join('') + `</div>`;
   return head + note + list;
@@ -542,7 +544,7 @@ function viewStale(){
     : `<div class="results">` + r.map(f => {
         const fr = freshness(f.reviewed);
         return `<button class="result" data-file="${esc(f.file)}">
-          <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span>
+          <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span>${localBadge(f)}
             <span class="fresh-badge ${fr.cls}" style="margin-left:auto">${esc(fr.label)}</span></div>
           <div class="rd">${esc((f.path || []).join(' / ') || 'général')}</div></button>`;
       }).join('') + `</div>`;
@@ -558,7 +560,7 @@ function runServerSearch(q){
         ? `<div class="empty">Aucun fait dont le contenu contient « ${esc(q)} ».</div>`
         : `<div class="results">` + res.map(f => `
             <button class="result" data-file="${esc(f.file)}">
-              <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span></div>
+              <div class="rh">${badge(f.type)}<span class="rn">${esc(f.name)}</span>${localBadge(f)}</div>
               <div class="rd">${esc((f.path||[]).join(' / ') || 'général')}</div>
             </button>`).join('') + `</div>`;
       m.innerHTML = `<div style="margin-bottom:10px;color:var(--muted2)">Contenu · « ${esc(q)} »</div>` + list;
@@ -691,6 +693,7 @@ function viewDraft(){
       <label>nom (slug)</label><input id="d-name" placeholder="ex: regle-tva-export" autocomplete="off" oninput="this.value=slugify(this.value)">
       <label>description</label><input id="d-desc" placeholder="une ligne discriminante" autocomplete="off">
       <label>type</label><select id="d-type"><option value="project">project</option><option value="reference">reference</option><option value="user">user (perso)</option><option value="feedback">feedback (perso)</option></select>
+      <label><input type="checkbox" id="d-local"> fait local (ne pas partager)</label>
       <label>domaine</label><div class="combo"><input id="d-domain" placeholder="ex: mailing ou mailing/transactionnel (vide = général)" autocomplete="off"><div id="d-domain-pop" class="combo-pop hidden"></div></div>
       <label>contenu</label><textarea id="d-body" placeholder="Le fait, concis et autonome…"></textarea>
     </div>
@@ -727,7 +730,7 @@ function bindDraft(){
   async function doCreate(){
     const dom = v('d-domain').replace(/^\/+|\/+$/g,'');
     const meta = await api('POST', '/api/fact', { name:v('d-name'), description:v('d-desc'),
-      type:$('d-type').value, body:$('d-body').value, domain:dom });
+      type:$('d-type').value, body:$('d-body').value, domain:dom, local: $('d-local').checked });
     applyMeta(meta);
     state.view='fact'; state.factId = (dom && $('d-type').value!=='user' && $('d-type').value!=='feedback')
       ? dom+'/'+v('d-name')+'.md' : v('d-name')+'.md';

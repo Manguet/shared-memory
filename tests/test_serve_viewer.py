@@ -105,6 +105,20 @@ class SearchRouteTest(ServerTestBase):
         status, payload = self.get("/search?q=zzzznotfound")
         self.assertEqual(json.loads(payload), [])
 
+    def test_search_returns_local_flag(self):
+        sv.create_fact(self.vault, {"name": "locflag", "description": "fait local recherchable",
+                                    "type": "project", "domain": "mailing", "local": True,
+                                    "body": "contenu zzlocalzz unique"})
+        status, payload = self.get("/search?q=zzlocalzz")
+        self.assertEqual(status, 200)
+        res = json.loads(payload)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["name"], "locflag")
+        self.assertIs(res[0]["local"], True)
+        # le fait non-local du baseline expose local: False
+        status, payload = self.get("/search?q=corps%20secret")
+        self.assertIs(json.loads(payload)[0]["local"], False)
+
 
 class CreateTest(ServerTestBase):
     def _token(self):
@@ -365,6 +379,16 @@ class LocalFlagTest(unittest.TestCase):
         with open(os.path.join(self.vault, "mailing", "ff.md"), encoding="utf-8") as f:
             txt = f.read()
         self.assertNotIn("local:", txt)
+
+
+class TemplateLocalUITest(unittest.TestCase):
+    def test_template_has_local_controls(self):
+        tmpl = os.path.join(os.path.dirname(__file__), "..", "assets", "viewer-template.html")
+        with open(tmpl, encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn("d-local", html)      # case à cocher création
+        self.assertIn("e-local", html)      # case à cocher édition
+        self.assertIn("localBadge", html)   # helper de rendu du badge
 
 
 class ViewerGuideTest(unittest.TestCase):

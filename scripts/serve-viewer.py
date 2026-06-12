@@ -222,7 +222,7 @@ def make_handler(vault, template):
                 for f in facts:
                     hay = " ".join((f["name"], f["description"], f["body"])).lower()
                     if q and q in hay:
-                        res.append({k: f[k] for k in ("file", "name", "description", "type", "path")})
+                        res.append({k: f[k] for k in ("file", "name", "description", "type", "path", "local")})
                 self._send(200, json.dumps(res, ensure_ascii=False),
                            "application/json; charset=utf-8")
             else:
