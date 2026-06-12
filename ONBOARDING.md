@@ -89,7 +89,7 @@ régénérés automatiquement ; seuls de **vrais** conflits de faits demandent u
 
 ## Pour aller plus loin
 
-- 🚀 [`INSTALL.md`](INSTALL.md) — installation pas-à-pas (référent + chaque membre), mise à jour,
+- [`INSTALL.md`](INSTALL.md) — installation pas-à-pas (référent + chaque membre), mise à jour,
   désinstallation.
-- 📐 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète.
-- 🗂️ [`docs/domain-convention.md`](docs/domain-convention.md) — comment un fait est structuré et rangé.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète.
+- [`docs/domain-convention.md`](docs/domain-convention.md) — comment un fait est structuré et rangé.

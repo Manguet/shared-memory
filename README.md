@@ -44,15 +44,15 @@ réécrit aucun outil de sync.
 L'outil est conçu pour **ne pas être chronophage** : tu écris la mémoire, le reste se déclenche
 tout seul.
 
-- **🔔 Rappel au démarrage (digest)** — à l'ouverture d'une session, Claude reçoit un **résumé
+- **Rappel au démarrage (digest)** — à l'ouverture d'une session, Claude reçoit un **résumé
   d'une ligne par fait** (groupé par domaine). Il **sait** ce que l'équipe a appris et relit le
   fait quand le sujet arrive, **sans que tu aies à le lui demander**. Borné : sur un gros vault, le
   digest retombe sur la carte des domaines + la recherche.
-- **🔄 Synchro au démarrage** — le vault est mis à jour (`git pull`) automatiquement ; tu repars
+- **Synchro au démarrage** — le vault est mis à jour (`git pull`) automatiquement ; tu repars
   toujours du savoir le plus récent de l'équipe.
-- **📝 Rappel de promotion** — en fin de session (et au démarrage), Claude te signale les faits
+- **Rappel de promotion** — en fin de session (et au démarrage), Claude te signale les faits
   locaux non encore partagés, pour lancer `/memory-promote` au bon moment.
-- **🕐 Fraîcheur signalée** — les faits trop vieux (≥ 90 j) sont marqués **`⚠`** : la confiance ne
+- **Fraîcheur signalée** — les faits trop vieux (≥ 90 j) sont marqués **`⚠`** : la confiance ne
   s'érode pas en silence.
 
 **Véracité préservée :** le digest et la recherche **aiguillent** ; Claude **relit toujours le
@@ -82,7 +82,7 @@ En face, ce surcoût remplace des dépenses **récurrentes et bien plus lourdes*
 contexte à chaque session, faire re-découvrir à Claude ce que l'équipe sait déjà, corriger des
 affirmations sans source. Le rapport est favorable dès qu'une session réutilise **un seul** fait.
 
-> 💡 Astuce coût : des **descriptions d'une ligne** (≈ 15 mots) gardent le digest léger. La
+> Astuce coût : des **descriptions d'une ligne** (≈ 15 mots) gardent le digest léger. La
 > `description` est l'aiguillage — pas un résumé du fait.
 
 ## La boucle de gouvernance (deux étages)
@@ -124,33 +124,33 @@ flowchart TD
 
 ### Sous le capot
 
-- **🔎 Recherche sémantique** — l'outil MCP **`search_memory`** (vectoriel local via *fastembed*,
+- **Recherche sémantique** — l'outil MCP **`search_memory`** (vectoriel local via *fastembed*,
   **repli grep** si absent) renvoie des **pointeurs** de faits, jamais le contenu : *l'index aiguille,
   le fait est la source*. Claude relit le fait avant d'affirmer.
-- **🗂️ Sharding par domaine** — la carte `MEMORY.md` (chargée au démarrage) ne liste que des
+- **Sharding par domaine** — la carte `MEMORY.md` (chargée au démarrage) ne liste que des
   **domaines** ; les faits sont rangés par domaine avec des **sous-index compacts** lus à la demande
   → coût tokens de démarrage **borné** quelle que soit la taille. `reshard.py` redécoupe
   récursivement un domaine trop gros en sous-domaines (prouvé à **9 300 faits**).
-- **🖥️ Viewer + CRUD local** — un mini-serveur local (`http://localhost`, lecture seule du contenu,
+- **Viewer + CRUD local** — un mini-serveur local (`http://localhost`, lecture seule du contenu,
   **écriture en brouillon étage 1**) : arbre N-niveaux, recherche hybride, créer/éditer/supprimer un
   fait, renommer un domaine — sans jamais toucher au canonique.
-- **🔄 Boucle vivante (hooks)** — au **démarrage de session** : **digest** des faits (rappel
+- **Boucle vivante (hooks)** — au **démarrage de session** : **digest** des faits (rappel
   automatique, cf. ci-dessus) + synchro automatique du vault + rappel des faits non promus ;
   **rappel en fin de session**. Best-effort, jamais bloquant.
-- **🕐 Fraîcheur** — chaque fait porte une date `reviewed` ; le viewer signale les faits **périmés**
+- **Fraîcheur** — chaque fait porte une date `reviewed` ; le viewer signale les faits **périmés**
   (≥ 90 j ou jamais vérifiés) → la confiance ne s'érode pas en silence.
-- **🧬 Dédup sémantique** — à la création, un fait trop proche d'un existant (cosine ≥ 0.80) est
+- **Dédup sémantique** — à la création, un fait trop proche d'un existant (cosine ≥ 0.80) est
   **signalé** : on met à jour plutôt qu'empiler un doublon.
-- **🧹 Lint des faits** — `/memory-lint` détecte les dérives de format (champs requis, type valide,
+- **Lint des faits** — `/memory-lint` détecte les dérives de format (champs requis, type valide,
   `name` unique, date bien formée, wikilinks cassés) et **normalise** le frontmatter à plat vers le
   bloc `metadata:` canonique. Rapport d'abord ; **correction opt-in**, jamais silencieuse.
-- **🔁 Re-vérification (`/memory-refresh`)** — la fraîcheur ne fait pas que signaler : `/memory-refresh`
+- **Re-vérification (`/memory-refresh`)** — la fraîcheur ne fait pas que signaler : `/memory-refresh`
   liste les faits périmés (≥ 90 j ou jamais vérifiés), les **confronte au code actuel**, et
   **re-stampe** ceux encore vrais, **corrige** ou **retire** les autres. La confiance ne s'érode pas.
-- **📊 Éval du rappel (`/memory-eval`)** — mesure si le bon fait remonte au bon moment (`recall@k`,
+- **Éval du rappel (`/memory-eval`)** — mesure si le bon fait remonte au bon moment (`recall@k`,
   `MRR`, discriminabilité) via le vrai chemin de recherche. Les ratés orientent la remédiation
   (description, dédup, fastembed). On **mesure** la valeur, on ne la suppose pas.
-- **🔒 Sûreté** — faits perso `gitignore`és (jamais poussés), serveur lié à `127.0.0.1` + jeton
+- **Sûreté** — faits perso `gitignore`és (jamais poussés), serveur lié à `127.0.0.1` + jeton
   same-origin, validation anti-traversal, CI sur chaque push.
 
 ## Recherche & rappel — comment un fait remonte
@@ -217,12 +217,12 @@ shared-memory/
 
 ## Documentation
 
-- 👋 [`ONBOARDING.md`](ONBOARDING.md) — **démarrage équipe en une page** (rôles, premiers pas, le
+- [`ONBOARDING.md`](ONBOARDING.md) — **démarrage équipe en une page** (rôles, premiers pas, le
   quotidien, gouvernance) — le meilleur point d'entrée pour un nouveau membre.
-- 📐 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète (principes, deux étages,
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète (principes, deux étages,
   multi-vault, viewer, recherche, hooks, fraîcheur, dédup, amorçage).
-- 🗂️ [`docs/domain-convention.md`](docs/domain-convention.md) — la convention de sharding : carte,
+- [`docs/domain-convention.md`](docs/domain-convention.md) — la convention de sharding : carte,
   sous-index compacts, profondeur récursive, `reviewed`, garde-fous.
-- 🚀 [`INSTALL.md`](INSTALL.md) — installation pas-à-pas (admin + chaque membre).
-- 🧭 [`docs/superpowers/`](docs/superpowers/) — l'historique de conception : un **spec** + un **plan**
+- [`INSTALL.md`](INSTALL.md) — installation pas-à-pas (admin + chaque membre).
+- [`docs/superpowers/`](docs/superpowers/) — l'historique de conception : un **spec** + un **plan**
   par chantier (sharding, viewer, recherche/MCP, reshard, CRUD, hooks, fraîcheur, dédup, amorçage…).
