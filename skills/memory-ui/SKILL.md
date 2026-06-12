@@ -1,6 +1,7 @@
 ---
 name: memory-ui
 description: This skill should be used when the user asks to "ouvrir la mémoire", "voir la mémoire d'équipe", "visualiser la mémoire", "afficher le vault", "show team memory", "memory ui", or "/memory-ui". It launches a local read-only server for the project's memory vault and gives an http link to open in the browser, after confirmation.
+argument-hint: ""
 allowed-tools: Bash
 version: 0.2.0
 ---

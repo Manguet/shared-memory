@@ -71,7 +71,7 @@ versionné. Tout le reste est privé à chaque poste.
 
 ÉTAGE 2 — CANONIQUE (gouverné, source de vérité)
   • type: project | reference uniquement
-  • entre via une étape de validation (pending → approuvé)
+  • entre via une étape de validation (branche promote/* → fusion dans main)
   • main du vault = LA vérité, identique pour tous (git pull)
 ```
 
@@ -157,16 +157,23 @@ marketplace GitHub publique. Le repo étant public, le `git clone` ne demande **
   (la source de galères des apps natives Windows : symlinks instables, git lent sur
   `/mnt/c`, file-watching défaillant).
 
-### Skills prévues
+### Skills livrées
+
+**Livré** : 12 skills — setup, unsetup, seed, import, list, ui, promote, review, lint, refresh, eval, doctor.
 
 | Skill | Rôle | Étape |
 |-------|------|-------|
 | `/memory-setup` | clone le vault du projet + crée le symlink (registre) | install |
-| `/memory-list` | consulter / chercher dans la mémoire | lecture |
+| `/memory-unsetup` | débranche le projet (retire symlink + registre, garde le clone) | install |
+| `/memory-seed` | amorce un vault vide depuis les sources humaines (CLAUDE.md, doc) | écriture |
 | `/memory-import` | **normaliser** un doc brut → faits au format mémoire | écriture |
-| `/memory-promote` | proposer mes faits locaux → `pending` (vérif contre le code) | écriture |
-| `/memory-review` | un référent valide `pending → canonique` | gouvernance |
-| `/memory-ui` | ouvrir l'interface visuelle (navigateur) | visualisation |
+| `/memory-list` | consulter / chercher dans la mémoire | lecture |
+| `/memory-ui` | ouvrir l'interface visuelle (mini-serveur local) | visualisation |
+| `/memory-promote` | proposer mes faits locaux → branche `promote/*` (vérif contre le code) | écriture |
+| `/memory-review` | un référent **fusionne la branche dans `main`** (canonique) | gouvernance |
+| `/memory-lint` | valider / nettoyer le format des faits (rapport + fix opt-in) | qualité |
+| `/memory-refresh` | re-vérifier les faits périmés contre le code (re-stamp / corrige / retire) | qualité |
+| `/memory-eval` | mesurer la qualité du rappel (recall@k, MRR) | qualité |
 | `/memory-doctor` | diagnostiquer la recherche sémantique + proposer les installs | diagnostic |
 
 > **Normaliser, pas importer-sync.** `/memory-import` transforme de la doc brute en
@@ -244,7 +251,7 @@ navigateur Windows (forwarding automatique).
 ╔═══════════════════════════════════════════════════════════════════════╗
 ║  REPO PLUGIN (outil, PUBLIC)        REPOS VAULT (mémoire, privés, N)   ║
 ║  • skills /memory-*                 • Vault équipe 1 (projet A)        ║
-║  • viewer HTML                      • Vault équipe 2 (projet B)        ║
+║  • viewer (mini-serveur local)      • Vault équipe 2 (projet B)        ║
 ║  • scripts git/symlink/open         • … (MEMORY.md + faits .md)        ║
 ╚═══════════════════════════════════════════════════════════════════════╝
         │ installé une fois              ▲ pull (lecture) / push validé (écriture)
@@ -297,11 +304,11 @@ navigateur Windows (forwarding automatique).
 - Repo plugin : `github.com/Manguet/shared-memory` (public).
 - Vault : emplacement/hébergement libres ; **catalogue de vaults disponibles** pour le setup.
 - Promotion = faits `type: project` + `type: reference` (jamais `user`/`feedback`).
+- **Catalogue de vaults** = `skills/memory-setup/references/vaults.md` (dans le repo plugin).
+- **Déclencheur de promotion** = hook `SessionEnd` (rappel) / `/memory-promote` explicite.
 
 **À décider :**
 - Nombre d'approbations requis pour merger (1 par défaut, ou 2 pour plus de rigueur).
-- Ce qui déclenche une promotion (proposé : fin de session de travail).
-- Où vit le catalogue de vaults (dans le repo plugin, ou fichier de config dédié).
 
 ---
 

@@ -2,7 +2,7 @@
 name: memory-promote
 description: This skill should be used when the user asks to "promouvoir la mémoire", "partager mes mémoires", "proposer mes faits à l'équipe", "pousser la mémoire d'équipe", "promote memory", "/memory-promote", or at the end of a work session to propose new project facts to the shared vault. It collects new/changed project & reference memories, verifies them against the code, and pushes a proposal branch (git only) for a reviewer to merge.
 argument-hint: "[résumé]"
-allowed-tools: Bash, Read, Grep, Glob
+allowed-tools: Bash, Read, Grep, Glob, Edit
 version: 0.2.0
 ---
 
@@ -46,7 +46,8 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    périmés/contradictoires, et résumer à l'utilisateur ce qui est gardé, corrigé, écarté.
    C'est le cœur du skill — ne pas le sauter.
    Pour chaque fait **confirmé vrai** contre le code, mettre à jour son `metadata.reviewed` à la
-   **date du jour** (c'est le signal de fraîcheur : « vérifié le … »).
+   **date du jour** (c'est le signal de fraîcheur : « vérifié le … »). Pour re-stamper, tu peux
+   utiliser `python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/stale.py --restamp "<clone>/<fait>"`.
 
 5. **Régénérer l'index hiérarchique via reshard** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
    Chaque fait retenu vit dans `<domaine>/<fait>.md`. Lancer :

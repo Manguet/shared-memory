@@ -206,10 +206,13 @@ shared-memory/
 ├── .github/workflows/      CI (unittest au push)
 ├── skills/                 setup · unsetup · seed · import · list · ui · promote · review · lint · refresh · eval · doctor
 ├── scripts/
-│   ├── lib.sh, setup-vault.sh, view.sh, doctor.sh, hook-memory.sh   bash : setup, viewer, prérequis, hooks
+│   ├── lib.sh, setup-vault.sh, unlink-vault.sh, uninstall.sh        bash : setup, débranchement, désinstallation
+│   ├── view.sh, doctor.sh, hook-memory.sh                           bash : viewer, prérequis, hooks de session
 │   ├── build-viewer.py, serve-viewer.py                             viewer : lecture + serveur http + CRUD
 │   ├── sm_paths.py, embed.py, mcp-server.py, doctor.py, similar.py  recherche : embeddings, MCP, dédup
-│   └── reshard.py, gen-synth-vault.py, verify-scale.py              sharding récursif + vérif à l'échelle
+│   ├── reshard.py, gen-synth-vault.py, verify-scale.py              sharding récursif + vérif à l'échelle
+│   ├── digest.py                                                    digest au démarrage (rappel automatique)
+│   └── lint.py, stale.py, resolve-conflicts.py, eval-recall.py      qualité : lint, fraîcheur, conflits, éval
 ├── assets/                 viewer-template.html, fact-template.md
 ├── tests/                  unittest (viewer, embeddings, MCP, doctor, reshard, hooks, dédup, …)
 └── docs/                   ARCHITECTURE.md, domain-convention.md, superpowers/ (specs & plans)

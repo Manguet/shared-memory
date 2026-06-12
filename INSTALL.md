@@ -92,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/Manguet/shared-memory/main/install.
 (ou : `git clone https://github.com/Manguet/shared-memory.git && bash shared-memory/install.sh`.)
 
 Le script vérifie les prérequis, clone le plugin dans `~/.shared-memory/plugin`, et affiche
-les 2 commandes à coller dans Claude Code :
+les 3 commandes à coller dans Claude Code :
 
 ```
 /plugin marketplace add ~/.shared-memory/plugin

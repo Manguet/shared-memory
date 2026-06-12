@@ -220,7 +220,7 @@ def make_handler(vault, template):
                 self._send(404, "not found")
 
         def _json_body(self):
-            n = int(self.headers.get("Content-Length") or 0)
+            n = max(0, int(self.headers.get("Content-Length") or 0))
             raw = self.rfile.read(n) if n else b"{}"
             return json.loads(raw or b"{}")
 
