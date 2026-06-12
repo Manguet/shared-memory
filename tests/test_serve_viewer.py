@@ -7,6 +7,7 @@ import unittest
 import urllib.error
 import urllib.request
 from http.server import HTTPServer
+from pathlib import Path
 
 
 def _token_of(base_get):
@@ -125,7 +126,7 @@ class CreateTest(ServerTestBase):
                        "body": "corps", "domain": "mailing"}, token=self._token())
         self.assertEqual(r.status, 200)
         self.assertTrue(os.path.isfile(os.path.join(self.vault, "mailing", "relance.md")))
-        self.assertIn("relance", open(os.path.join(self.vault, "index", "mailing.md"), encoding="utf-8").read())
+        self.assertIn("relance", Path(os.path.join(self.vault, "index", "mailing.md")).read_text(encoding="utf-8"))
 
     def test_create_personal_goes_to_root_not_indexed(self):
         write_req(self.port, "POST", "/api/fact",
@@ -156,7 +157,7 @@ class UpdateTest(ServerTestBase):
         write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
                   {"name": "audit", "type": "reference", "description": "maj", "body": "neuf", "domain": "mailing"},
                   token=self._token())
-        txt = open(os.path.join(self.vault, "mailing", "audit.md"), encoding="utf-8").read()
+        txt = Path(os.path.join(self.vault, "mailing", "audit.md")).read_text(encoding="utf-8")
         self.assertIn("type: reference", txt)
         self.assertIn("neuf", txt)
 
@@ -216,7 +217,7 @@ class RenameDomainTest(ServerTestBase):
             f.write("# Carte\n\n## Domaines\n- **mailing** (1) → `index/mailing.md` — emails\n")
         write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "emailing"},
                   token=self._token())
-        mem = open(os.path.join(self.vault, "MEMORY.md"), encoding="utf-8").read()
+        mem = Path(os.path.join(self.vault, "MEMORY.md")).read_text(encoding="utf-8")
         self.assertIn("index/emailing.md", mem)
         self.assertNotIn("index/mailing.md", mem)
 
@@ -242,7 +243,7 @@ class HardeningTest(ServerTestBase):
         write_req(self.port, "POST", "/api/fact",
                   {"name": "nl", "type": "project", "description": "ligne1\nligne2", "body": "corps", "domain": "mailing"},
                   token=self._token())
-        fm = open(os.path.join(self.vault, "mailing", "nl.md"), encoding="utf-8").read().split("---")[1]
+        fm = Path(os.path.join(self.vault, "mailing", "nl.md")).read_text(encoding="utf-8").split("---")[1]
         self.assertIn("description: ligne1 ligne2", fm)
         self.assertNotIn("ligne1\nligne2", fm)
 
@@ -251,7 +252,7 @@ class HardeningTest(ServerTestBase):
             f.write("# Carte\n\n## Domaines\n- **mailing** (1) → `index/mailing.md`\n\n"
                     "## Notes\n- La stratégie **mailing** est centrale.\n")
         write_req(self.port, "POST", "/api/rename-domain", {"old": "mailing", "new": "emailing"}, token=self._token())
-        mem = open(os.path.join(self.vault, "MEMORY.md"), encoding="utf-8").read()
+        mem = Path(os.path.join(self.vault, "MEMORY.md")).read_text(encoding="utf-8")
         self.assertIn("`index/emailing.md`", mem)
         self.assertIn("La stratégie **mailing** est centrale.", mem)
 
@@ -267,14 +268,14 @@ class ReviewedStampTest(ServerTestBase):
         write_req(self.port, "POST", "/api/fact",
                   {"name": "r", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
                   token=self._token())
-        txt = open(os.path.join(self.vault, "mailing", "r.md"), encoding="utf-8").read()
+        txt = Path(os.path.join(self.vault, "mailing", "r.md")).read_text(encoding="utf-8")
         self.assertIn("reviewed: %s" % _dt.date.today().isoformat(), txt)
 
     def test_update_restamps_reviewed_today(self):
         write_req(self.port, "PUT", "/api/fact?f=mailing/audit.md",
                   {"name": "audit", "type": "project", "description": "d", "body": "b", "domain": "mailing"},
                   token=self._token())
-        txt = open(os.path.join(self.vault, "mailing", "audit.md"), encoding="utf-8").read()
+        txt = Path(os.path.join(self.vault, "mailing", "audit.md")).read_text(encoding="utf-8")
         self.assertIn("reviewed: %s" % _dt.date.today().isoformat(), txt)
 
 

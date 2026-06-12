@@ -143,7 +143,8 @@ class HookScriptTest(unittest.TestCase):
 
 class PluginHooksTest(unittest.TestCase):
     def test_plugin_declares_session_hooks(self):
-        cfg = json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))
+        with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
+            cfg = json.load(f)
         hooks = cfg.get("hooks", {})
         start = json.dumps(hooks.get("SessionStart"))
         end = json.dumps(hooks.get("SessionEnd"))

@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import unittest
+from pathlib import Path
 
 HERE = os.path.dirname(__file__)
 SPEC = importlib.util.spec_from_file_location(
@@ -103,7 +104,7 @@ class ReshardCoreTest(unittest.TestCase):
             R.reshard(v, max_entries=2)
             self.assertTrue(os.path.isfile(os.path.join(v, "feedback_x.md")))
             for f in md_files_under(os.path.join(v, "index")):
-                self.assertNotIn("feedback-x", open(f, encoding="utf-8").read())
+                self.assertNotIn("feedback-x", Path(f).read_text(encoding="utf-8"))
 
     def test_misplaced_perso_fact_relocated_to_root(self):
         with tempfile.TemporaryDirectory() as v:
@@ -117,7 +118,7 @@ class ReshardCoreTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(v, "feedback-oops.md")))           # relogé racine
             self.assertFalse(os.path.isfile(os.path.join(v, "mailing", "feedback_oops.md")))
             for f in md_files_under(os.path.join(v, "index")):
-                self.assertNotIn("feedback-oops", open(f, encoding="utf-8").read())          # hors index
+                self.assertNotIn("feedback-oops", Path(f).read_text(encoding="utf-8"))          # hors index
 
     def test_memory_lists_domains(self):
         with tempfile.TemporaryDirectory() as v:
@@ -125,7 +126,7 @@ class ReshardCoreTest(unittest.TestCase):
                 write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
             write_fact(v, "ui/a.md", "a")
             R.reshard(v, max_entries=5)
-            mem = open(os.path.join(v, "MEMORY.md"), encoding="utf-8").read()
+            mem = Path(os.path.join(v, "MEMORY.md")).read_text(encoding="utf-8")
             self.assertIn("- mailing (3 faits) → index/mailing.md", mem)
             self.assertIn("- ui (1 faits) → index/ui.md", mem)
 
@@ -142,7 +143,7 @@ def index_depth(vault):
 def leaf_pointer_targets(vault):
     targets = []
     for f in index_files_under(vault):
-        for line in open(f, encoding="utf-8").read().splitlines():
+        for line in Path(f).read_text(encoding="utf-8").splitlines():
             if line.startswith("- `"):                  # ligne de fait (feuille)
                 targets.append(line.split("→")[1].strip().strip("`"))
     return targets
@@ -173,7 +174,7 @@ class ReshardRecursionTest(unittest.TestCase):
                 write_fact(v, "mailing/f%02d.md" % i, "f%02d" % i)
             R.reshard(v, max_entries=4)
             for f in index_files_under(v):
-                entries = [l for l in open(f, encoding="utf-8").read().splitlines()
+                entries = [l for l in Path(f).read_text(encoding="utf-8").splitlines()
                            if l.startswith("- ")]
                 self.assertLessEqual(len(entries), 4)
 
@@ -182,10 +183,10 @@ class ReshardRecursionTest(unittest.TestCase):
             for i in range(9):
                 write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
             R.reshard(v, max_entries=2)
-            snap1 = {os.path.relpath(f, v): open(f, encoding="utf-8").read()
+            snap1 = {os.path.relpath(f, v): Path(f).read_text(encoding="utf-8")
                      for f in index_files_under(v)}
             R.reshard(v, max_entries=2)
-            snap2 = {os.path.relpath(f, v): open(f, encoding="utf-8").read()
+            snap2 = {os.path.relpath(f, v): Path(f).read_text(encoding="utf-8")
                      for f in index_files_under(v)}
             self.assertEqual(snap1, snap2)
 
@@ -225,7 +226,7 @@ class ReshardMemoryTest(unittest.TestCase):
             for i in range(3):
                 write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
             R.reshard(v, max_entries=5)
-            after = open(os.path.join(v, "MEMORY.md"), encoding="utf-8").read()
+            after = Path(os.path.join(v, "MEMORY.md")).read_text(encoding="utf-8")
             self.assertEqual(after, curated)                       # intacte, mot pour mot
             self.assertIn("convention humaine précieuse", after)
 
@@ -234,7 +235,7 @@ class ReshardMemoryTest(unittest.TestCase):
             for i in range(3):
                 write_fact(v, "mailing/f%d.md" % i, "f%d" % i)
             R.reshard(v, max_entries=5)
-            mem = open(os.path.join(v, "MEMORY.md"), encoding="utf-8").read()
+            mem = Path(os.path.join(v, "MEMORY.md")).read_text(encoding="utf-8")
             self.assertIn("- mailing (3 faits) → index/mailing.md", mem)
 
 

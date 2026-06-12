@@ -47,7 +47,8 @@ class ModelCacheProbeTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             sub = os.path.join(d, "models--x", "snapshots", "abc")
             os.makedirs(sub)
-            open(os.path.join(sub, "model_optimized.onnx"), "w").close()
+            with open(os.path.join(sub, "model_optimized.onnx"), "w"):
+                pass
             self.assertTrue(D._has_onnx([d]))
 
     def test_has_onnx_false_when_absent(self):

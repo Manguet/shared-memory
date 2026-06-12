@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 HERE = os.path.dirname(__file__)
 LIB = os.path.join(HERE, "..", "scripts", "lib.sh")
@@ -32,10 +33,10 @@ class PersonalIgnoreTest(unittest.TestCase):
             self.assertIn("feedback_x.md", status(c))      # avant : non suivi, visible
             ensure_ignore(c)
             self.assertNotIn("feedback_x.md", status(c))   # après : ignoré
-            excl = open(os.path.join(c, ".git", "info", "exclude")).read()
+            excl = Path(os.path.join(c, ".git", "info", "exclude")).read_text()
             self.assertEqual(excl.count("feedback_*.md"), 1)
             ensure_ignore(c)                               # idempotent
-            excl2 = open(os.path.join(c, ".git", "info", "exclude")).read()
+            excl2 = Path(os.path.join(c, ".git", "info", "exclude")).read_text()
             self.assertEqual(excl2.count("feedback_*.md"), 1)
 
     def test_no_repo_is_noop(self):
@@ -47,7 +48,7 @@ class PersonalIgnoreTest(unittest.TestCase):
 class CiWorkflowTest(unittest.TestCase):
     def test_workflow_runs_unittest_on_push_and_pr(self):
         p = os.path.join(HERE, "..", ".github", "workflows", "tests.yml")
-        txt = open(p, encoding="utf-8").read()
+        txt = Path(p).read_text(encoding="utf-8")
         self.assertIn("unittest discover", txt)
         self.assertIn("pull_request", txt)
         self.assertIn("push", txt)

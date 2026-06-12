@@ -2,6 +2,7 @@ import importlib.util
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 HERE = os.path.dirname(__file__)
 SPEC = importlib.util.spec_from_file_location(
@@ -147,7 +148,7 @@ class LintFixTest(unittest.TestCase):
         write(p, FLAT)
         n = lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
         self.assertEqual(n, 1)
-        out = open(p, encoding="utf-8").read()
+        out = Path(p).read_text(encoding="utf-8")
         self.assertIn("metadata:", out)
         self.assertIn("  type: project", out)
         self.assertIn("  reviewed: 2026-06-01", out)
@@ -169,10 +170,10 @@ class LintFixTest(unittest.TestCase):
                    "description: une description assez longue pour passer le seuil\n"
                    "metadata:\n  type: project\n  reviewed: 2026-06-01\n---\nc\n")
         write(p, content)
-        before = open(p, encoding="utf-8").read()
+        before = Path(p).read_text(encoding="utf-8")
         n = lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
         self.assertEqual(n, 0)
-        self.assertEqual(open(p, encoding="utf-8").read(), before)
+        self.assertEqual(Path(p).read_text(encoding="utf-8"), before)
 
     def test_fix_merges_flat_key_into_existing_metadata(self):
         # bloc metadata: partiel (type) + une clé reviewed à plat -> fusion sans doublon
@@ -181,7 +182,7 @@ class LintFixTest(unittest.TestCase):
                  "description: un fait avec bloc metadata partiel et une clé reviewed à plat\n"
                  "metadata:\n  type: project\nreviewed: 2026-06-01\n---\nc\n")
         lint.apply_fixes(self.vault, lint.lint_vault(self.vault))
-        out = open(p, encoding="utf-8").read()
+        out = Path(p).read_text(encoding="utf-8")
         self.assertIn("  type: project", out)
         self.assertIn("  reviewed: 2026-06-01", out)
         self.assertNotIn("\nreviewed: 2026-06-01", out)   # plus de clé à plat

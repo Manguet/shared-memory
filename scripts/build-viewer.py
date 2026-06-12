@@ -16,7 +16,8 @@ def parse_md(path):
     indentées `  type: project` produit la clé plate `metadata.type`. Les clés de premier
     niveau restent telles quelles. Évite la capture accidentelle d'une clé `type` indentée.
     """
-    text = open(path, encoding="utf-8").read()
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
     fm, body = {}, text
     m = re.match(r"^---\n(.*?)\n---\n?(.*)$", text, re.S)
     if m:

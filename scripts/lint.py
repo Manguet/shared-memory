@@ -107,7 +107,8 @@ def lint_vault(vault):
     findings = []
     for rel in files:
         full = os.path.join(vault, rel)
-        text = open(full, encoding="utf-8").read()
+        with open(full, encoding="utf-8") as f:
+            text = f.read()
         if not FM_RE.match(text):
             findings.append(_finding(rel, "frontmatter_invalid", "error", False,
                                      "Frontmatter `---` absent ou illisible."))

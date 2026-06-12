@@ -56,7 +56,8 @@ def main():
     over = []
     maxdepth = 0
     for f in files:
-        entries = [l for l in open(f, encoding="utf-8").read().splitlines() if l.startswith("- ")]
+        with open(f, encoding="utf-8") as _fh:
+            entries = [l for l in _fh.read().splitlines() if l.startswith("- ")]
         if len(entries) > args.max_entries:
             over.append((os.path.relpath(f, args.dest), len(entries)))
         maxdepth = max(maxdepth, len(os.path.relpath(f, idx).split(os.sep)))

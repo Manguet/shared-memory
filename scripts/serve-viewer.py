@@ -138,7 +138,9 @@ def _patch_memory_domain(vault, old, new):
         return
     ptr_old, ptr_new = "index/%s.md" % old, "index/%s.md" % new
     out = []
-    for line in open(path, encoding="utf-8").read().splitlines(keepends=True):
+    with open(path, encoding="utf-8") as _fh:
+        _content = _fh.read()
+    for line in _content.splitlines(keepends=True):
         if ptr_old in line:                      # ligne de domaine : patch pointeur + libellé en gras
             line = line.replace(ptr_old, ptr_new).replace("**%s**" % old, "**%s**" % new)
         out.append(line)
@@ -189,7 +191,8 @@ def make_handler(vault, template):
                 facts, index_body = bv.collect_facts(vault, include_body=False)
                 data = {"facts": facts, "index": index_body, "vault": vault,
                         "count": len(facts), "token": token}
-                html = open(template, encoding="utf-8").read().replace(
+                with open(template, encoding="utf-8") as _tf:
+                    html = _tf.read().replace(
                     "/*__DATA__*/", json.dumps(data, ensure_ascii=False))
                 self._send(200, html, "text/html; charset=utf-8")
             elif u.path == "/fact":
