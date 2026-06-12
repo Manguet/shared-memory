@@ -32,6 +32,9 @@ reshard = _load("reshard", "reshard.py")
 embed = _load("embed", "embed.py")
 
 SLUG_RE = re.compile(r"^[a-z0-9-]+$")
+# Domaine : un slug, ou un chemin de sous-domaines (mailing/transactionnel). Chaque segment = slug.
+DOMAIN_RE = re.compile(r"^[a-z0-9-]+(/[a-z0-9-]+)*$")
+_PART_SEG_RE = re.compile(r"^part-\d+$")
 TYPES = {"project", "reference", "user", "feedback"}
 
 
@@ -58,8 +61,11 @@ def _validate(data):
     domain = (data.get("domain") or "").strip()
     if typ in ("user", "feedback"):
         domain = ""
-    elif domain and not SLUG_RE.match(domain):
-        raise ApiError(400, "domaine invalide (slug attendu)")
+    elif domain:
+        if not DOMAIN_RE.match(domain):
+            raise ApiError(400, "domaine invalide (slug, ou sous-domaines a-z0-9- séparés par /)")
+        if any(_PART_SEG_RE.match(seg) for seg in domain.split("/")):
+            raise ApiError(400, "« part-NN » est réservé au découpage automatique (reshard)")
     desc = (data.get("description") or "").replace("\r", " ").replace("\n", " ").strip()
     return name, typ, domain, desc, data.get("body", "") or ""
 

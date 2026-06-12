@@ -142,6 +142,22 @@ class CreateTest(ServerTestBase):
                       token=self._token())
         self.assertEqual(cm.exception.code, 400)
 
+    def test_create_in_subdomain_stays(self):
+        r = write_req(self.port, "POST", "/api/fact",
+                      {"name": "relances", "type": "project", "description": "relances paniers",
+                       "body": "corps", "domain": "mailing/transactionnel"}, token=self._token())
+        self.assertEqual(r.status, 200)
+        self.assertTrue(os.path.isfile(
+            os.path.join(self.vault, "mailing", "transactionnel", "relances.md")))
+
+    def test_create_invalid_domain_is_400(self):
+        for bad in ("mailing/Pas-Bon", "mailing//x", "mailing/../x", "mailing/part-01"):
+            with self.assertRaises(urllib.error.HTTPError) as cm:
+                write_req(self.port, "POST", "/api/fact",
+                          {"name": "x", "type": "project", "description": "d", "body": "b", "domain": bad},
+                          token=self._token())
+            self.assertEqual(cm.exception.code, 400, "domaine accepté à tort : %s" % bad)
+
     def test_create_duplicate_is_400(self):
         body = {"name": "audit", "type": "project", "description": "d", "body": "b", "domain": "mailing"}
         with self.assertRaises(urllib.error.HTTPError) as cm:
