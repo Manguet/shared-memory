@@ -325,6 +325,48 @@ class SimilarEndpointTest(ServerTestBase):
         self.assertTrue(res["vector_inactive"])
 
 
+class LocalFlagTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_create_local_writes_flag(self):
+        sv.create_fact(self.vault, {"name": "loc", "description": "fait local du viewer",
+                                    "type": "project", "domain": "mailing", "local": True, "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "loc.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertIn("local: true", txt)
+
+    def test_create_without_local_has_no_flag(self):
+        sv.create_fact(self.vault, {"name": "norm", "description": "fait normal du viewer",
+                                    "type": "project", "domain": "mailing", "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "norm.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertNotIn("local:", txt)
+
+    def test_local_fact_absent_from_index(self):
+        sv.create_fact(self.vault, {"name": "loc2", "description": "local hors index",
+                                    "type": "project", "domain": "mailing", "local": True, "body": "x"})
+        sv.create_fact(self.vault, {"name": "pub", "description": "partage donc indexe",
+                                    "type": "project", "domain": "mailing", "body": "x"})
+        idx_path = os.path.join(self.vault, "index", "mailing.md")
+        self.assertTrue(os.path.isfile(idx_path), "l'index mailing doit exister après création de pub")
+        with open(idx_path, encoding="utf-8") as fh:
+            idx = fh.read()
+        self.assertIn("pub", idx)
+        self.assertNotIn("loc2", idx)
+
+    def test_create_local_false_string_no_flag(self):
+        sv.create_fact(self.vault, {"name": "ff", "description": "chaine false explicite",
+                                    "type": "project", "domain": "mailing", "local": "false", "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "ff.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertNotIn("local:", txt)
+
+
 class ViewerGuideTest(unittest.TestCase):
     """Garde-fou anti-dérive : le viewer doit mentionner chaque skill memory-*."""
 
