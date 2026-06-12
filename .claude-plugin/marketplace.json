@@ -9,7 +9,7 @@
       "name": "shared-memory",
       "source": "./",
       "description": "Mémoire d'équipe partagée par projet : vault git privé (un par équipe) branché sur la mémoire native de Claude Code, gouvernance par Pull Request.",
-      "version": "0.1.0"
+      "version": "0.3.0"
     }
   ]
 }
