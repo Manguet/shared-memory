@@ -125,6 +125,10 @@ def _materialize_semantic(node, segments, max_entries):
     names = [f["name"] for f in direct]
     if len(names) != len(set(names)):
         raise ValueError("noms en double dans %s" % seg)
+    collide = set(names) & set(node["children"])
+    if collide:
+        raise ValueError("un fait masque un sous-domaine homonyme dans %s : %s"
+                         % (seg, ", ".join(sorted(collide))))
     if direct:
         if len(direct) <= max_entries:
             for fa in direct:

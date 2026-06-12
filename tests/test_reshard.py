@@ -311,7 +311,6 @@ def _wf(vault, rel, name, desc="desc", typ="project"):
 
 class SemanticSubdomainTest(unittest.TestCase):
     def setUp(self):
-        import tempfile
         self._t = tempfile.TemporaryDirectory()
         self.v = self._t.name
 
@@ -357,6 +356,12 @@ class SemanticSubdomainTest(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "a.md")))
         self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "b.md")))
         self.assertFalse(os.path.isdir(os.path.join(self.v, "mailing", "part-01")))
+
+    def test_fact_name_colliding_with_subdomain_raises(self):
+        _wf(self.v, "mailing/transactionnel.md", "transactionnel")   # un fait nommé transactionnel
+        _wf(self.v, "mailing/transactionnel/x.md", "x")              # un sous-domaine homonyme
+        with self.assertRaises(ValueError):
+            R.reshard(self.v, max_entries=50)
 
 
 if __name__ == "__main__":
