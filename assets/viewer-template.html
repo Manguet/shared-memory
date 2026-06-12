@@ -549,11 +549,17 @@ function viewAbout(){
 function viewGuide(){
   const rows = [
     ['/memory-setup &lt;url&gt;', 'Brancher le vault (une fois par projet)'],
+    ['/memory-unsetup', 'Débrancher le projet (garde le clone)'],
+    ['/memory-seed', 'Amorcer un vault vide (CLAUDE.md, doc)'],
+    ['/memory-import', 'Normaliser un doc en faits atomiques'],
     ['/memory-list &lt;terme&gt;', 'Chercher dans la mémoire'],
-    ['/memory-import', 'Ajouter de la doc / un fait'],
-    ['/memory-promote', "Proposer ses faits à l'équipe (branche)"],
-    ['/memory-review', 'Relire et fusionner les propositions'],
     ['/memory-ui', 'Rouvrir cette vue'],
+    ['/memory-promote', "Proposer ses faits à l'équipe (branche)"],
+    ['/memory-review', 'Relire et fusionner les propositions (référent)'],
+    ['/memory-lint', 'Valider / nettoyer le format des faits'],
+    ['/memory-refresh', 'Re-vérifier les faits périmés contre le code'],
+    ['/memory-eval', 'Mesurer la qualité du rappel (recall@k)'],
+    ['/memory-doctor', 'Diagnostiquer la recherche sémantique'],
   ];
   return `<h3 class="view-h">Guide des commandes</h3>
     <p class="view-p">À lancer dans Claude Code.</p>
@@ -585,6 +591,10 @@ const USAGE_STEPS = [
    how:"Le fait est maintenant officiel et appartient au savoir commun de l'équipe.",
    actions:["Il est dans la mémoire principale du vault.","Chaque coéquipier le récupère au prochain /memory-ui ou au démarrage de session.","Claude s'en sert automatiquement quand c'est pertinent."],
    note:"Et le cycle recommence pour la prochaine connaissance."},
+  {n:7, t:"Entretenir", cmd:"/memory-lint · /memory-refresh · /memory-eval", tag:"qualité",
+   how:"La mémoire reste vraie et utile dans le temps : on nettoie le format, on re-vérifie ce qui vieillit, on mesure que le bon fait remonte.",
+   actions:["/memory-lint signale les problèmes de format et corrige le frontmatter à plat (après accord).","/memory-refresh re-vérifie les faits périmés (≥ 90 j) contre le code, puis les re-stampe / corrige / retire.","/memory-eval mesure si le bon fait remonte pour des requêtes réalistes (recall@k, MRR)."],
+   note:"Bon réflexe d'hygiène d'équipe, de temps en temps."},
 ];
 function usageColor(s){ return s.barrier ? 'var(--reference)' : (s.tag === 'équipe' ? 'var(--coral)' : 'var(--faint)'); }
 function viewUsage(){

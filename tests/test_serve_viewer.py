@@ -309,5 +309,21 @@ class SimilarEndpointTest(ServerTestBase):
         self.assertTrue(res["vector_inactive"])
 
 
+class ViewerGuideTest(unittest.TestCase):
+    """Garde-fou anti-dérive : le viewer doit mentionner chaque skill memory-*."""
+
+    def test_guide_lists_every_skill(self):
+        here = os.path.dirname(__file__)
+        tmpl = Path(os.path.join(here, "..", "assets", "viewer-template.html")).read_text(
+            encoding="utf-8")
+        skills_dir = os.path.join(here, "..", "skills")
+        skills = sorted(d for d in os.listdir(skills_dir)
+                        if d.startswith("memory-") and os.path.isdir(os.path.join(skills_dir, d)))
+        self.assertEqual(len(skills), 12)   # filet : si on ajoute un skill, penser au viewer
+        for name in skills:
+            self.assertIn("/" + name, tmpl,
+                          "Le guide du viewer ne mentionne pas /%s" % name)
+
+
 if __name__ == "__main__":
     unittest.main()
