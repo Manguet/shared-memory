@@ -313,7 +313,7 @@ class SearchQueryFnTest(unittest.TestCase):
                    _fact("relance-j3", "relancer les paniers abandonnés après 72 heures"))
             _write(os.path.join(v, "facturation", "tva.md"),
                    _fact("tva", "taux de TVA à vingt pour cent"))
-            query_fn, vector_inactive = er.search_query_fn(v, k=8, embed_fn=None)
+            query_fn, vector_inactive, _facts = er.search_query_fn(v, k=8, embed_fn=None)
             self.assertTrue(vector_inactive)                       # grep forcé
             ranked = query_fn("paniers abandonnés relance")
             self.assertIn("relance-j3", ranked)                    # le fait pertinent ressort
@@ -322,8 +322,7 @@ class SearchQueryFnTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as v:
             _write(os.path.join(v, "mailing", "relance-j3.md"),
                    _fact("relance-j3", "relancer les paniers abandonnés après 72 heures"))
-            facts, _ = er._bv.collect_facts(v, include_body=False)
-            query_fn, _vi = er.search_query_fn(v, k=8, embed_fn=None)
+            query_fn, _vi, facts = er.search_query_fn(v, k=8, embed_fn=None)
             rep = er.eval_cases(er.auto_cases(facts), query_fn, k=8)
             self.assertEqual(rep["n"], 1)
             self.assertEqual(rep["hits"], 1)                       # description -> son fait (grep)
