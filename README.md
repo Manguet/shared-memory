@@ -180,6 +180,8 @@ commandes `/plugin` à coller dans Claude Code (ajout par **chemin local**, puis
 
 ## Démarrage
 
+Nouveau dans l'équipe ? Commence par **[`ONBOARDING.md`](ONBOARDING.md)** (une page). En bref :
+
 ```bash
 # Dans un projet déjà ouvert dans Claude Code :
 /memory-setup git@github.com:<org>/<projet>-memory.git   # brancher le vault
@@ -202,7 +204,7 @@ shared-memory/
 ├── .claude-plugin/         plugin.json, marketplace.json
 ├── .mcp.json               déclare le serveur MCP (search_memory)
 ├── .github/workflows/      CI (unittest au push)
-├── skills/                 memory-setup · -seed · -import · -list · -ui · -promote · -review · -doctor
+├── skills/                 setup · unsetup · seed · import · list · ui · promote · review · lint · refresh · eval · doctor
 ├── scripts/
 │   ├── lib.sh, setup-vault.sh, view.sh, doctor.sh, hook-memory.sh   bash : setup, viewer, prérequis, hooks
 │   ├── build-viewer.py, serve-viewer.py                             viewer : lecture + serveur http + CRUD
@@ -215,6 +217,8 @@ shared-memory/
 
 ## Documentation
 
+- 👋 [`ONBOARDING.md`](ONBOARDING.md) — **démarrage équipe en une page** (rôles, premiers pas, le
+  quotidien, gouvernance) — le meilleur point d'entrée pour un nouveau membre.
 - 📐 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — la conception complète (principes, deux étages,
   multi-vault, viewer, recherche, hooks, fraîcheur, dédup, amorçage).
 - 🗂️ [`docs/domain-convention.md`](docs/domain-convention.md) — la convention de sharding : carte,
