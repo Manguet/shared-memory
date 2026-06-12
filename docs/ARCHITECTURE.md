@@ -448,3 +448,20 @@ La désinstallation en est l'**inverse exact**, en **conservant les données** p
 **Mise à jour** : `install.sh` fait déjà un `git pull` du plugin s'il est déjà cloné — « update » =
 relancer l'installateur + `/reload-plugins`. Les fonctions registre (`sm_symlink_for_slug`,
 `sm_registry_slugs`, `sm_unregister`) sont partagées par les deux scripts et testées.
+
+## 17. Évaluation du rappel
+
+Tout vise à ce que **le bon fait remonte au bon moment** ; `scripts/eval-recall.py` le **mesure**.
+Pour des cas `{query, expect}`, il interroge le **vrai** chemin de recherche (`embed.search`, comme
+`search_memory`) et calcule **`recall@k`** (le fait attendu est-il dans le top-k ?), **`MRR`** (à
+quelle hauteur ?) et **`rang #1`** (discriminabilité : un fait souvent masqué par un autre = descriptions
+confusables).
+
+- **`auto_cases`** : éval automatique (chaque description sert de requête → son fait doit ressortir)
+  — repère la retrievabilité et les doublons.
+- **`/memory-eval`** : Claude génère des **requêtes réalistes** par fait (pas la description brute) →
+  éval → **ratés** + pistes de remédiation (`/memory-lint` pour les descriptions, dédup pour les
+  confusables, `/memory-doctor` pour activer fastembed, `/memory-refresh` pour les faits périmés).
+
+L'éval est **diagnostique** (pas de seuil/gating) et **honnête** : en repli **grep** (sans fastembed),
+le recall est un proxy lexical faible, signalé dans le rapport. Le moteur est **lecture seule**.

@@ -117,6 +117,7 @@ flowchart TD
 | `/memory-ui` | **viewer web** local : explorer + **CRUD** des faits (créer/éditer/supprimer/déplacer) |
 | `/memory-lint` | **valider/nettoyer** les faits : rapport des problèmes de format + correction mécanique du frontmatter à plat (opt-in) |
 | `/memory-refresh` | **re-vérifier les faits périmés** (≥ 90 j) contre le code : re-stamper / corriger / retirer |
+| `/memory-eval` | **mesurer le rappel** : le bon fait remonte-t-il (recall@k, MRR) pour des requêtes réalistes |
 | `/memory-promote` | proposer ses faits à l'équipe (vérifie le code, pousse une branche) |
 | `/memory-review` | relire et fusionner les propositions (git seul) |
 | `/memory-doctor` | diagnostiquer la recherche sémantique et proposer les installs |
@@ -146,6 +147,9 @@ flowchart TD
 - **🔁 Re-vérification (`/memory-refresh`)** — la fraîcheur ne fait pas que signaler : `/memory-refresh`
   liste les faits périmés (≥ 90 j ou jamais vérifiés), les **confronte au code actuel**, et
   **re-stampe** ceux encore vrais, **corrige** ou **retire** les autres. La confiance ne s'érode pas.
+- **📊 Éval du rappel (`/memory-eval`)** — mesure si le bon fait remonte au bon moment (`recall@k`,
+  `MRR`, discriminabilité) via le vrai chemin de recherche. Les ratés orientent la remédiation
+  (description, dédup, fastembed). On **mesure** la valeur, on ne la suppose pas.
 - **🔒 Sûreté** — faits perso `gitignore`és (jamais poussés), serveur lié à `127.0.0.1` + jeton
   same-origin, validation anti-traversal, CI sur chaque push.
 
