@@ -356,11 +356,17 @@ jamais de dégradation invisible.
 > `docs/superpowers/`.
 
 ### Boucle vivante : hooks de session
-Deux **hooks plugin** referment la boucle sans discipline manuelle. `SessionStart` :
-`git pull --ff-only` **best-effort** (time-boxé, non destructif — refuse sans écraser les brouillons
-étage 1) pour ne pas travailler sur une mémoire périmée, puis rappelle les faits locaux non promus
-(« prévois `/memory-promote` avant de fermer »). `SessionEnd` : dernier rappel. Tout est silencieux
-si le projet n'est pas branché ou en cas d'échec (jamais bloquant). Script : `scripts/hook-memory.sh`.
+Deux **hooks plugin** referment la boucle sans discipline manuelle. `SessionStart` : `git pull
+--ff-only` **best-effort** (time-boxé, non destructif, et **seulement si un remote `origin` existe**)
+pour ne pas travailler sur une mémoire périmée. Comme la sortie d'un hook `SessionStart` n'est **pas
+affichée** dans le terminal (elle n'alimente que le contexte du modèle), le hook la formule en
+**instruction** : Claude **affiche en première réponse** un **rappel compact** — résumé du vault
+(`digest.py --summary` : « N faits (domaines…) »), nombre de faits à récupérer / non promus
+(« pense à `/memory-promote` »), et un **nudge `/doctor`** si une **vérif santé** légère
+(`sm_health_issues` : git/python présents, clone du vault versionné, lien mémoire câblé, pull réussi)
+remonte un problème. Le **digest complet** suit en contexte silencieux pour amorcer le modèle.
+`SessionEnd` : dernier rappel de promotion. Tout est silencieux si le projet n'est pas branché ou en
+cas d'échec (jamais bloquant). Script : `scripts/hook-memory.sh`.
 
 ### Fraîcheur (anti-péremption)
 Chaque fait porte `metadata.reviewed` (date de dernière vérification). Stampée à la création /
