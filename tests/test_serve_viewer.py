@@ -105,6 +105,20 @@ class SearchRouteTest(ServerTestBase):
         status, payload = self.get("/search?q=zzzznotfound")
         self.assertEqual(json.loads(payload), [])
 
+    def test_search_returns_local_flag(self):
+        sv.create_fact(self.vault, {"name": "locflag", "description": "fait local recherchable",
+                                    "type": "project", "domain": "mailing", "local": True,
+                                    "body": "contenu zzlocalzz unique"})
+        status, payload = self.get("/search?q=zzlocalzz")
+        self.assertEqual(status, 200)
+        res = json.loads(payload)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["name"], "locflag")
+        self.assertIs(res[0]["local"], True)
+        # le fait non-local du baseline expose local: False
+        status, payload = self.get("/search?q=corps%20secret")
+        self.assertIs(json.loads(payload)[0]["local"], False)
+
 
 class CreateTest(ServerTestBase):
     def _token(self):
@@ -323,6 +337,58 @@ class SimilarEndpointTest(ServerTestBase):
         finally:
             sv.embed.load_fastembed_embed_fn = orig
         self.assertTrue(res["vector_inactive"])
+
+
+class LocalFlagTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_create_local_writes_flag(self):
+        sv.create_fact(self.vault, {"name": "loc", "description": "fait local du viewer",
+                                    "type": "project", "domain": "mailing", "local": True, "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "loc.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertIn("local: true", txt)
+
+    def test_create_without_local_has_no_flag(self):
+        sv.create_fact(self.vault, {"name": "norm", "description": "fait normal du viewer",
+                                    "type": "project", "domain": "mailing", "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "norm.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertNotIn("local:", txt)
+
+    def test_local_fact_absent_from_index(self):
+        sv.create_fact(self.vault, {"name": "loc2", "description": "local hors index",
+                                    "type": "project", "domain": "mailing", "local": True, "body": "x"})
+        sv.create_fact(self.vault, {"name": "pub", "description": "partage donc indexe",
+                                    "type": "project", "domain": "mailing", "body": "x"})
+        idx_path = os.path.join(self.vault, "index", "mailing.md")
+        self.assertTrue(os.path.isfile(idx_path), "l'index mailing doit exister après création de pub")
+        with open(idx_path, encoding="utf-8") as fh:
+            idx = fh.read()
+        self.assertIn("pub", idx)
+        self.assertNotIn("loc2", idx)
+
+    def test_create_local_false_string_no_flag(self):
+        sv.create_fact(self.vault, {"name": "ff", "description": "chaine false explicite",
+                                    "type": "project", "domain": "mailing", "local": "false", "body": "x"})
+        with open(os.path.join(self.vault, "mailing", "ff.md"), encoding="utf-8") as f:
+            txt = f.read()
+        self.assertNotIn("local:", txt)
+
+
+class TemplateLocalUITest(unittest.TestCase):
+    def test_template_has_local_controls(self):
+        tmpl = os.path.join(os.path.dirname(__file__), "..", "assets", "viewer-template.html")
+        with open(tmpl, encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn("d-local", html)      # case à cocher création
+        self.assertIn("e-local", html)      # case à cocher édition
+        self.assertIn("localBadge", html)   # helper de rendu du badge
 
 
 class ViewerGuideTest(unittest.TestCase):

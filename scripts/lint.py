@@ -81,6 +81,13 @@ def _lint_fact(rel, fm, body, known):
         out.append(_finding(rel, "reviewed_malformed", "warn", False,
                             "`reviewed: %s` n'est pas au format AAAA-MM-JJ." % reviewed))
 
+    # Drapeau `local` : fait jamais partagé. Toléré, mais on prévient si la
+    # valeur n'est ni `true` ni `false` (règle douce, jamais bloquante).
+    local_val = fm.get("metadata.local") or fm.get("local")
+    if local_val is not None and str(local_val).strip().lower() not in ("true", "false"):
+        out.append(_finding(rel, "local_malformed", "warn", False,
+                            "`local: %s` doit valoir `true` ou `false`." % local_val))
+
     if name and not SLUG_RE.match(name):
         out.append(_finding(rel, "name_not_slug", "warn", False,
                             "`name` n'est pas un slug kebab-case (renommer casserait les pointeurs)."))

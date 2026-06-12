@@ -169,7 +169,7 @@ PY
 # pas un dépôt git. Utilise `status --porcelain -z` (NUL-séparé, SANS quoting) pour gérer
 # correctement les noms accentués / avec espaces / les renommages.
 sm_count_unpromoted() {
-  local clone="$1" n=0 rec st path type _old
+  local clone="$1" n=0 rec st path type loc _old
   [ -d "$clone" ] || { printf '0'; return 0; }
   while IFS= read -r -d '' rec; do
     st="${rec:0:2}"
@@ -182,6 +182,8 @@ sm_count_unpromoted() {
     esac
     type="$(sed -n 's/^[[:space:]]*type:[[:space:]]*//p' "$clone/$path" 2>/dev/null | head -1)"
     case "$type" in user|feedback) continue ;; esac
+    loc="$(sed -n 's/^[[:space:]]*local:[[:space:]]*//p' "$clone/$path" 2>/dev/null | head -1)"
+    case "$loc" in true|True|TRUE) continue ;; esac
     n=$((n + 1))
   done < <(git -C "$clone" status --porcelain -z 2>/dev/null)
   printf '%s' "$n"

@@ -37,11 +37,19 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    git -C "<clone>" diff --name-only origin/main
    ```
 
-3. **Filtrer par type.** Lire le frontmatter de chaque candidat. **Ne garder que**
-   `metadata.type: project` ou `reference`. **Exclure** `user`, `feedback`, et tout
-   `feedback_*.md` (perso, jamais partagés).
+3. **Filtrer.** Lire le frontmatter de chaque candidat. **Ne garder que** `metadata.type: project`
+   ou `reference`. **Exclure** `user`, `feedback`, tout `feedback_*.md`, **et tout fait
+   `metadata.local: true`** (faits gardés en local, jamais partagés).
 
-4. **Vérifier sémantiquement chaque fait retenu.** Confronter au **code actuel** (Grep/Read/Glob) :
+4. **Sélection interactive.** Présenter la liste des candidats restants. Demander à l'utilisateur
+   s'il veut **exclure** certains faits de cette promotion. Pour chaque fait exclu, demander :
+   - **« toujours »** → poser `metadata.local: true` sur le fait dans le vault (il sort des candidats
+     et du compteur, durablement) ;
+   - **« cette fois »** → ne pas l'inclure dans cette proposition (aucun drapeau ; il restera candidat
+     au prochain promote).
+   Les faits restants après ce tri sont les **faits sélectionnés**.
+
+5. **Vérifier sémantiquement chaque fait sélectionné.** Confronter au **code actuel** (Grep/Read/Glob) :
    encore vrai ? contredit-il la version canonique dans `main` ? Écarter ou corriger les faits
    périmés/contradictoires, et résumer à l'utilisateur ce qui est gardé, corrigé, écarté.
    C'est le cœur du skill — ne pas le sauter.
@@ -49,37 +57,34 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
    **date du jour** (c'est le signal de fraîcheur : « vérifié le … »). Pour re-stamper, tu peux
    utiliser `python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/stale.py --restamp "<clone>/<fait>"`.
 
-5. **Régénérer l'index hiérarchique via reshard** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
-   Chaque fait retenu vit dans `<domaine>/<fait>.md`. Lancer :
+6. **Repérer le rangement par domaine** (→ `${CLAUDE_PLUGIN_ROOT}/docs/domain-convention.md`).
+   Chaque fait sélectionné vit dans `<domaine>/<fait>.md` : noter son **chemin relatif** dans le
+   vault, c'est lui qui sera recopié à l'identique dans le worktree (étape 7). reshard y régénérera
+   `index/**` (lignes compactes) et **découpera en sous-domaines** tout domaine dépassant ~150 faits
+   (déplacement de faits). Si un **nouveau domaine** apparaît, sa ligne sera à ajouter à `MEMORY.md` ;
+   si un découpage a lieu, le **signaler** dans le résumé de proposition.
+
+7. **Construire la proposition dans un worktree propre** (l'index poussé ne contiendra que les faits
+   sélectionnés ; le vault local n'est pas muté) :
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "<clone>"
+   tmp="$(mktemp -d)"
+   git -C "<clone>" fetch origin
+   git -C "<clone>" worktree add --detach "$tmp" origin/main
+   # copier dans $tmp UNIQUEMENT les faits sélectionnés, à leur chemin relatif (mkdir -p au besoin)
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/reshard.py "$tmp"      # index propre, sans les exclus/local
+   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/lint.py "$tmp"         # advisory
+   git -C "$tmp" checkout -b promote/<slug>-<court-descriptif>
+   git -C "$tmp" add -A
+   git -C "$tmp" commit -m "memory: <résumé>"
+   git -C "$tmp" push -u origin HEAD
+   git -C "<clone>" worktree remove "$tmp" && git -C "<clone>" worktree prune
    ```
 
-   reshard régénère `index/**` (lignes compactes) et **découpe en sous-domaines** tout domaine
-   dépassant ~150 faits (déplacement de faits). Il **préserve la carte `MEMORY.md`** curée ; si un
-   **nouveau domaine** apparaît, ajouter sa ligne à `MEMORY.md` à la main. Si un découpage a lieu,
-   le **signaler** dans le résumé de proposition.
-
-6. **Garde-fou lint (advisory).** Avant de pousser, vérifier le format des faits du clone :
-
-   ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT%/}/scripts/lint.py "<clone>"
-   ```
-
-   **S'il y a des erreurs** (`severity=error` : champ requis manquant, type invalide, `name` en
-   double), les **afficher** et **demander** s'il faut les corriger d'abord (via `/memory-lint` ou
-   à la main). **Advisory** : ne pas bloquer la promotion de force ; l'utilisateur décide. Les
-   avertissements sont mentionnés mais ne retardent pas le push.
-
-7. **Créer la branche + commit + push** depuis le clone (inclure faits + sous-index + carte) :
-
-   ```bash
-   git -C "<clone>" checkout -b promote/<slug>-<court-descriptif> origin/main
-   git -C "<clone>" add -A     # faits (déplacés en sous-domaines compris), index/**, MEMORY.md
-   git -C "<clone>" commit -m "memory: <résumé>"
-   git -C "<clone>" push -u origin HEAD
-   ```
+   Si un **nouveau domaine** apparaît, ajouter sa ligne à `MEMORY.md` (dans `$tmp`) avant le commit.
+   Le **lint** est **advisory** : s'il signale des erreurs (`severity=error` : champ requis manquant,
+   type invalide, `name` en double), les **afficher** et **demander** s'il faut les corriger d'abord
+   (via `/memory-lint` ou à la main) — sans bloquer le push de force ; l'utilisateur décide.
 
 8. **Confirmer.** Donner le **nom de la branche** poussée et rappeler qu'un **référent** doit la
    relire et la fusionner via `/memory-review` (jamais l'auteur lui-même) avant qu'elle devienne
@@ -93,6 +98,8 @@ fusionné automatiquement : un référent valide via `/memory-review` (voir `ref
   **réduit les conflits** ; la carte `MEMORY.md` ne change qu'à la **création d'un domaine**.
   Garder la carte = liste de domaines (jamais un fait par ligne).
 - **Faits perso** (`user`/`feedback`) : restent en local, ne jamais les inclure dans la branche.
+- **Faits `local`** : exclus de toute promotion (drapeau `metadata.local: true`) ; réglable via le
+  viewer (case « fait local ») ou la sélection interactive.
 
 ## Prochaine étape (guider l'utilisateur)
 

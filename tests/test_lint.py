@@ -190,5 +190,28 @@ class LintFixTest(unittest.TestCase):
         self.assertEqual(lint.lint_vault(self.vault), [])   # re-lint propre
 
 
+class LintLocalFlagTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_local_true_no_finding(self):
+        write(os.path.join(self.vault, "mailing", "a.md"),
+              "---\nname: a-loc\ndescription: Un fait local bien forme ici\n"
+              "metadata:\n  type: project\n  reviewed: 2026-06-01\n  local: true\n---\nc\n")
+        self.assertNotIn("local_malformed", rules_for(lint.lint_vault(self.vault)))
+
+    def test_local_garbage_warns(self):
+        write(os.path.join(self.vault, "mailing", "b.md"),
+              "---\nname: b-loc\ndescription: Valeur local invalide ici aussi\n"
+              "metadata:\n  type: project\n  reviewed: 2026-06-01\n  local: oui\n---\nc\n")
+        findings = lint.lint_vault(self.vault)
+        self.assertIn("local_malformed", rules_for(findings))
+        self.assertTrue(all(f["severity"] != "error" for f in findings if f["rule"] == "local_malformed"))
+
+
 if __name__ == "__main__":
     unittest.main()

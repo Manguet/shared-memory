@@ -45,10 +45,11 @@ class ApiError(Exception):
         self.message = message
 
 
-def _fact_text(name, description, type_, body, reviewed=None):
+def _fact_text(name, description, type_, body, reviewed=None, local=False):
     reviewed = reviewed or datetime.date.today().isoformat()
-    return ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n  reviewed: %s\n---\n%s\n"
-            % (name, description, type_, reviewed, body))
+    loc = "  local: true\n" if local else ""
+    return ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n  reviewed: %s\n%s---\n%s\n"
+            % (name, description, type_, reviewed, loc, body))
 
 
 def _validate(data):
@@ -67,7 +68,9 @@ def _validate(data):
         if any(_PART_SEG_RE.match(seg) for seg in domain.split("/")):
             raise ApiError(400, "« part-NN » est réservé au découpage automatique (reshard)")
     desc = (data.get("description") or "").replace("\r", " ").replace("\n", " ").strip()
-    return name, typ, domain, desc, data.get("body", "") or ""
+    # Drapeau « local » : fait privé au poste, ignoré par l'index (coercition souple).
+    local = data.get("local") is True or str(data.get("local") or "").strip().lower() == "true"
+    return name, typ, domain, local, desc, data.get("body", "") or ""
 
 
 def _rel_for(name, domain):
@@ -92,13 +95,13 @@ def _metadata(vault):
 
 
 def create_fact(vault, data):
-    name, typ, domain, desc, body = _validate(data)
+    name, typ, domain, local, desc, body = _validate(data)
     full = _safe_path(vault, _rel_for(name, domain))
     if os.path.exists(full):
         raise ApiError(400, "un fait « %s » existe déjà ici" % name)
     os.makedirs(os.path.dirname(full), exist_ok=True)
     with open(full, "w", encoding="utf-8") as f:
-        f.write(_fact_text(name, desc, typ, body))
+        f.write(_fact_text(name, desc, typ, body, local=local))
     reshard.reshard(vault)
     return _metadata(vault)
 
@@ -107,13 +110,13 @@ def update_fact(vault, file, data):
     old = _safe_path(vault, file)
     if not os.path.isfile(old):
         raise ApiError(404, "fait introuvable")
-    name, typ, domain, desc, body = _validate(data)
+    name, typ, domain, local, desc, body = _validate(data)
     new = _safe_path(vault, _rel_for(name, domain))
     if new != old and os.path.exists(new):
         raise ApiError(400, "un fait « %s » existe déjà à cet emplacement" % name)
     os.makedirs(os.path.dirname(new), exist_ok=True)
     with open(new, "w", encoding="utf-8") as f:
-        f.write(_fact_text(name, desc, typ, body))
+        f.write(_fact_text(name, desc, typ, body, local=local))
     if new != old:
         os.remove(old)
     reshard.reshard(vault)
@@ -219,7 +222,7 @@ def make_handler(vault, template):
                 for f in facts:
                     hay = " ".join((f["name"], f["description"], f["body"])).lower()
                     if q and q in hay:
-                        res.append({k: f[k] for k in ("file", "name", "description", "type", "path")})
+                        res.append({k: f[k] for k in ("file", "name", "description", "type", "path", "local")})
                 self._send(200, json.dumps(res, ensure_ascii=False),
                            "application/json; charset=utf-8")
             else:

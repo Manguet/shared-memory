@@ -71,6 +71,9 @@ def collect_facts(vault, include_body=True):
                 "description": fm.get("description", ""),
                 "type": fm.get("metadata.type") or fm.get("type", "project"),
                 "reviewed": fm.get("metadata.reviewed") or fm.get("reviewed", ""),
+                # drapeau « fait local » : parse_md rend le frontmatter en chaînes,
+                # donc metadata.local devient la chaîne "true"/"false" -> booléen
+                "local": (fm.get("metadata.local") or fm.get("local") or "").strip().lower() == "true",
                 "domain": domain,
                 "path": path,
             }

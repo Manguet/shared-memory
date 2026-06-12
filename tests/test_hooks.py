@@ -85,6 +85,15 @@ class CountUnpromotedTest(unittest.TestCase):
         git(self.c, "mv", "mailing/a.md", "mailing/a2.md")
         self.assertEqual(count_unpromoted(self.c), "1")
 
+    def test_local_fact_not_counted(self):
+        write(self.c, "mailing/loc.md",
+              "---\nname: loc\ndescription: d\nmetadata:\n  type: project\n  local: true\n---\nx\n")
+        self.assertEqual(count_unpromoted(self.c), "0")
+
+    def test_non_local_project_still_counted(self):
+        write(self.c, "mailing/shared.md", FACT % ("shared", "project"))
+        self.assertEqual(count_unpromoted(self.c), "1")
+
 
 def run_hook(mode, project_dir, registry, home=None):
     env = dict(os.environ, CLAUDE_PROJECT_DIR=project_dir, SM_REGISTRY=registry)

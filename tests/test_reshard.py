@@ -364,5 +364,53 @@ class SemanticSubdomainTest(unittest.TestCase):
             R.reshard(self.v, max_entries=50)
 
 
+class LocalFactTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.vault = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _w(self, rel, name, desc, local=False, typ="project"):
+        loc = "  local: true\n" if local else ""
+        body = ("---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n%s---\nx\n"
+                % (name, desc, typ, loc))
+        p = os.path.join(self.vault, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(body)
+
+    def test_local_fact_preserved_and_unindexed(self):
+        self._w("mailing/partage.md", "partage", "fait partageable du mailing")
+        self._w("mailing/prive.md", "prive", "fait local a garder", local=True)
+        R.reshard(self.vault)
+        self.assertTrue(os.path.exists(os.path.join(self.vault, "mailing", "prive.md")))
+        idx = ""
+        for root, _d, files in os.walk(os.path.join(self.vault, "index")):
+            for fn in files:
+                with open(os.path.join(root, fn), encoding="utf-8") as fh:
+                    idx += fh.read()
+        self.assertIn("partage", idx)
+        self.assertNotIn("prive", idx)
+
+    def test_local_only_domain_survives(self):
+        self._w("secret/seul.md", "seul", "unique fait du domaine, local", local=True)
+        R.reshard(self.vault)
+        self.assertTrue(os.path.exists(os.path.join(self.vault, "secret", "seul.md")))
+
+    def test_local_fact_idempotent(self):
+        self._w("mailing/partage.md", "partage", "fait partageable du mailing")
+        self._w("mailing/prive.md", "prive", "fait local a garder", local=True)
+        R.reshard(self.vault)
+        with open(os.path.join(self.vault, "mailing", "prive.md"), encoding="utf-8") as f:
+            first = f.read()
+        R.reshard(self.vault)
+        with open(os.path.join(self.vault, "mailing", "prive.md"), encoding="utf-8") as f:
+            second = f.read()
+        self.assertEqual(first, second)           # relancer reshard ne modifie pas le fait local
+        self.assertTrue(os.path.exists(os.path.join(self.vault, "mailing", "prive.md")))
+
+
 if __name__ == "__main__":
     unittest.main()
