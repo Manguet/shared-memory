@@ -67,5 +67,38 @@ class ReportTest(unittest.TestCase):
         self.assertIn("`z`", out)
 
 
+def _write(path, content):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def _fact(name, desc):
+    return "---\nname: %s\ndescription: %s\nmetadata:\n  type: project\n  reviewed: 2026-06-01\n---\n%s\n" % (
+        name, desc, desc)
+
+
+class SearchQueryFnTest(unittest.TestCase):
+    def test_grep_mode_ranks_lexical_match(self):
+        with tempfile.TemporaryDirectory() as v:
+            _write(os.path.join(v, "mailing", "relance-j3.md"),
+                   _fact("relance-j3", "relancer les paniers abandonnés après 72 heures"))
+            _write(os.path.join(v, "facturation", "tva.md"),
+                   _fact("tva", "taux de TVA à vingt pour cent"))
+            query_fn, vector_inactive, _facts = er.search_query_fn(v, k=8, embed_fn=None)
+            self.assertTrue(vector_inactive)                       # grep forcé
+            ranked = query_fn("paniers abandonnés")
+            self.assertIn("relance-j3", ranked)                    # le fait pertinent ressort
+
+    def test_auto_eval_end_to_end_grep(self):
+        with tempfile.TemporaryDirectory() as v:
+            _write(os.path.join(v, "mailing", "relance-j3.md"),
+                   _fact("relance-j3", "relancer les paniers abandonnés après 72 heures"))
+            query_fn, _vi, facts = er.search_query_fn(v, k=8, embed_fn=None)
+            rep = er.eval_cases(er.auto_cases(facts), query_fn, k=8)
+            self.assertEqual(rep["n"], 1)
+            self.assertEqual(rep["hits"], 1)                       # description -> son fait (grep)
+
+
 if __name__ == "__main__":
     unittest.main()
