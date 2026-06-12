@@ -683,10 +683,6 @@ function viewIndex(){
     <div class="card"><div class="fbody">${DATA.index ? md(DATA.index) : '(vide)'}</div></div>`;
 }
 
-function domainOptions(sel){
-  const doms = [...new Set(DATA.facts.map(f => (f.path||[])[0]).filter(Boolean))].sort();
-  return doms.map(d => `<option value="${esc(d)}"${d===sel?' selected':''}>${esc(d)}</option>`).join('');
-}
 function viewDraft(){
   return `<h3 class="view-h">Créer un fait</h3>
     <p class="view-p">Écrit en <b>local</b> (brouillon). Pour le partager : <code style="color:var(--coral)">/memory-promote</code>.</p>
