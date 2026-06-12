@@ -8,9 +8,12 @@ import argparse
 import importlib.util
 import math
 import os
+import re
 import shutil
 
 STAGING_DIRNAME = ".reshard-staging"
+
+PART_RE = re.compile(r"^part-\d+$")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _SPEC = importlib.util.spec_from_file_location(
@@ -48,23 +51,39 @@ def _read_raw(path):
         return f.read()
 
 
-def _domain_facts(vault):
-    """Groupe les faits par domaine de 1er niveau (path non vide). Faits racine ignorés.
-    Les faits perso (type user/feedback) égarés dans un domaine sont renvoyés à part pour
-    être relogés en racine (jamais shardés). Chaque fait porte 'raw', trié par name."""
+def _semantic_segments(path):
+    """Chemin de dossiers sémantique d'un fait : son path moins les segments `part-NN`."""
+    return [s for s in path if not PART_RE.match(s)]
+
+
+def _semantic_tree(vault):
+    """Arbre des dossiers sémantiques. Renvoie (root, perso).
+    root : {domaine: node} ; node = {'facts': [...], 'children': {nom: node}}.
+    Les faits perso (user/feedback) égarés en domaine sont renvoyés à part (relogés en racine)."""
     facts, _ = bv.collect_facts(vault, include_body=False)
-    by_domain, perso = {}, []
+    root, perso = {}, []
     for fa in facts:
-        if not fa["path"]:                  # fait déjà à la racine -> laissé tel quel
+        if not fa["path"]:
             continue
         fa = dict(fa, raw=_read_raw(os.path.join(vault, fa["file"])))
         if fa["type"] in ("user", "feedback"):
-            perso.append(fa)                # perso égaré dans un domaine -> à reloger en racine
+            perso.append(fa)
             continue
-        by_domain.setdefault(fa["path"][0], []).append(fa)
-    for d in by_domain:
-        by_domain[d].sort(key=lambda f: f["name"])
-    return by_domain, perso
+        segs = _semantic_segments(fa["path"])
+        if not segs:
+            continue
+        children = root
+        node = None
+        for s in segs:
+            node = children.setdefault(s, {"facts": [], "children": {}})
+            children = node["children"]
+        node["facts"].append(fa)
+    return root, perso
+
+
+def _count_node_facts(node):
+    """Total des faits sous un nœud sémantique (directs + tous descendants)."""
+    return len(node["facts"]) + sum(_count_node_facts(c) for c in node["children"].values())
 
 
 def _count_leaf_facts(node):
@@ -74,21 +93,18 @@ def _count_leaf_facts(node):
 
 
 def _materialize(node, segments):
-    """Renvoie (placements, indexes) pour un nœud à `segments` (ex. ['mailing','part-01']).
-    placements: (new_relpath, raw). indexes: (index_seg, kind, entries)."""
+    """Matérialise un sous-arbre `split_tree` (faits) en part-NN. Renvoie (placements, indexes).
+    placements : [(relpath, raw)]. indexes : [(seg, entries)] ; entries taguées ('fact'|'node')."""
     seg = "/".join(segments)
-    placements, indexes = [], []
+    placements, indexes, entries = [], [], []
     if "leaf" in node:
-        entries = []
         for fa in node["leaf"]:
             rel = seg + "/" + fa["name"] + ".md"
             placements.append((rel, fa["raw"]))
             entries.append(("fact", fa["name"], fa["description"], fa["type"], rel))
-        indexes.append((seg, "leaf", entries))
     else:
         children = node["children"]
         w = max(2, len(str(len(children))))
-        entries = []
         for i, child in enumerate(children):
             label = "part-%0*d" % (w, i + 1)
             child_seg = segments + [label]
@@ -96,18 +112,59 @@ def _materialize(node, segments):
             placements.extend(sub_p)
             indexes.extend(sub_i)
             entries.append(("node", label, _count_leaf_facts(child), "/".join(child_seg)))
-        indexes.append((seg, "node", entries))
+    indexes.append((seg, entries))
     return placements, indexes
 
 
-def _index_relpath_content(seg, kind, entries):
-    """Renvoie (relpath, content) pour un fichier index/<seg>.md (chemin relatif au vault)."""
+def _materialize_semantic(node, segments, max_entries):
+    """Matérialise un nœud sémantique : faits directs (leaf ou part-NN si débordement) + enfants
+    sémantiques. Renvoie (placements, indexes) ; l'index du nœud est MIXTE (faits + nœuds)."""
+    seg = "/".join(segments)
+    placements, indexes, entries = [], [], []
+    direct = sorted(node["facts"], key=lambda f: f["name"])
+    names = [f["name"] for f in direct]
+    if len(names) != len(set(names)):
+        raise ValueError("noms en double dans %s" % seg)
+    collide = set(names) & set(node["children"])
+    if collide:
+        raise ValueError("un fait masque un sous-domaine homonyme dans %s : %s"
+                         % (seg, ", ".join(sorted(collide))))
+    if direct:
+        if len(direct) <= max_entries:
+            for fa in direct:
+                rel = seg + "/" + fa["name"] + ".md"
+                placements.append((rel, fa["raw"]))
+                entries.append(("fact", fa["name"], fa["description"], fa["type"], rel))
+        else:
+            sub = split_tree(direct, max_entries)["children"]
+            w = max(2, len(str(len(sub))))
+            for i, child in enumerate(sub):
+                label = "part-%0*d" % (w, i + 1)
+                child_seg = segments + [label]
+                sub_p, sub_i = _materialize(child, child_seg)
+                placements.extend(sub_p)
+                indexes.extend(sub_i)
+                entries.append(("node", label, _count_leaf_facts(child), "/".join(child_seg)))
+    for cname in sorted(node["children"]):
+        child_seg = segments + [cname]
+        sub_p, sub_i = _materialize_semantic(node["children"][cname], child_seg, max_entries)
+        placements.extend(sub_p)
+        indexes.extend(sub_i)
+        entries.append(("node", cname, _count_node_facts(node["children"][cname]),
+                        "/".join(child_seg)))
+    indexes.append((seg, entries))
+    return placements, indexes
+
+
+def _index_relpath_content(seg, entries):
+    """(relpath, content) pour index/<seg>.md ; entries mixtes ('fact'|'node')."""
     lines = ["# %s" % seg, ""]
-    if kind == "leaf":
-        for _, name, desc, typ, rel in entries:
+    for e in entries:
+        if e[0] == "fact":
+            _, name, desc, typ, rel = e
             lines.append("- `%s` — %s · %s → `%s`" % (name, desc, typ, rel))
-    else:
-        for _, label, count, child_seg in entries:
+        else:
+            _, label, count, child_seg = e
             lines.append("- %s (%d faits) → index/%s.md" % (label, count, child_seg))
     return (os.path.join("index", seg + ".md"), "\n".join(lines) + "\n")
 
@@ -135,20 +192,16 @@ def _plan_layout(vault, max_entries):
       - counts : {domaine: nb_faits} ;
       - reloc  : [(relpath_racine, content)] des faits perso égarés à reloger en racine
                  (seulement ceux dont la cible n'existe pas encore)."""
-    by_domain, perso = _domain_facts(vault)
+    root, perso = _semantic_tree(vault)
     files, counts = [], {}
-    for domain, facts in sorted(by_domain.items()):
-        names = [f["name"] for f in facts]
-        if len(names) != len(set(names)):
-            raise ValueError("noms en double dans le domaine %s" % domain)
-        tree = split_tree(facts, max_entries)
-        placements, indexes = _materialize(tree, [domain])
+    for domain in sorted(root):
+        placements, indexes = _materialize_semantic(root[domain], [domain], max_entries)
         files.extend(placements)
-        for seg, kind, entries in indexes:
-            files.append(_index_relpath_content(seg, kind, entries))
-        counts[domain] = len(facts)
+        for seg, entries in indexes:
+            files.append(_index_relpath_content(seg, entries))
+        counts[domain] = _count_node_facts(root[domain])
     reloc = []
-    for fa in perso:                        # reloger les faits perso égarés à la racine
+    for fa in perso:
         rel = fa["name"] + ".md"
         if not os.path.exists(os.path.join(vault, rel)):
             reloc.append((rel, fa["raw"]))

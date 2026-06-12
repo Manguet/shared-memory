@@ -249,6 +249,15 @@
   .copied { color: var(--user); font-size: 12px; margin-left: 10px; }
   h3.view-h { font-size: 15px; margin: 0 0 4px; }
   p.view-p { color: var(--muted2); font-size: 12.5px; margin: 0 0 18px; }
+  .combo { position: relative; }
+  .combo-pop { position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 30;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    max-height: 240px; overflow: auto; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+  .combo-pop.hidden { display: none; }
+  .combo-row { padding: 7px 11px; font-size: 13px; cursor: pointer; color: var(--text); }
+  .combo-row:hover, .combo-row.sel { background: var(--coral-soft); }
+  .combo-create { color: var(--coral); }
+  .combo-empty { padding: 7px 11px; font-size: 12.5px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -307,6 +316,55 @@ async function api(method, path, body){
 function applyMeta(meta){ DATA.facts = meta.facts; DATA.index = meta.index; DATA.count = meta.count; rebuildNav(); }
 
 function esc(s){ return (s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function slugify(s){
+  return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+}
+function slugifyDomainLive(s){
+  return (s||'').split('/').map(slugify).join('/').replace(/\/{2,}/g,'/');
+}
+function isPart(seg){ return /^part-\d+$/.test(seg); }
+function semanticDomains(){
+  const set = new Set();
+  for(const f of DATA.facts){
+    const segs = (f.path||[]).filter(s => !isPart(s));
+    for(let i=1;i<=segs.length;i++) set.add(segs.slice(0,i).join('/'));
+  }
+  return [...set].sort();
+}
+function bindCombo(id){
+  const inp = $(id), pop = $(id+'-pop'); if(!inp || !pop) return;
+  let sel = -1;
+  const close = () => { pop.classList.add('hidden'); sel = -1; };
+  function render(){
+    const val = inp.value.replace(/^\/+|\/+$/g,'');
+    const all = semanticDomains();
+    const filt = all.filter(d => d.includes(val)).slice(0, 50);
+    let html = '';
+    if(val && !all.includes(val))
+      html += `<div class="combo-row combo-create" data-v="${esc(val)}">(Créer) ${esc(val)}</div>`;
+    html += filt.map(d => `<div class="combo-row" data-v="${esc(d)}">${esc(d)}</div>`).join('');
+    pop.innerHTML = html || `<div class="combo-empty">tape un nom — il sera créé</div>`;
+    pop.classList.remove('hidden'); sel = -1;
+    pop.querySelectorAll('.combo-row').forEach(r => r.onmousedown = e => {
+      e.preventDefault(); inp.value = r.dataset.v; close();
+    });
+  }
+  inp.addEventListener('input', () => { inp.value = slugifyDomainLive(inp.value); render(); });
+  inp.addEventListener('focus', render);
+  inp.addEventListener('blur', () => setTimeout(close, 120));
+  inp.addEventListener('keydown', e => {
+    const items = pop.querySelectorAll('.combo-row');
+    if(e.key === 'Escape'){ close(); return; }
+    if(e.key === 'Enter'){ if(sel>=0 && items[sel]){ inp.value = items[sel].dataset.v; close(); e.preventDefault(); } return; }
+    if(e.key === 'ArrowDown') sel = Math.min(items.length-1, sel+1);
+    else if(e.key === 'ArrowUp') sel = Math.max(0, sel-1);
+    else return;
+    items.forEach((r,i) => r.classList.toggle('sel', i===sel));
+    if(items[sel]) items[sel].scrollIntoView({block:'nearest'});
+    e.preventDefault();
+  });
+}
 function md(s){ return esc(s)
   .replace(/^### (.*)$/gm, '<h4>$1</h4>')
   .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -434,22 +492,23 @@ function editFact(f){
   const body = raw.replace(/^---[\s\S]*?---\n?/, '');
   $('main').innerHTML = `<div class="card detail"><h3 class="view-h">Éditer un fait</h3>
     <div class="form">
-      <label>nom (slug)</label><input id="e-name" value="${esc(f.name)}">
+      <label>nom (slug)</label><input id="e-name" value="${esc(f.name)}" oninput="this.value=slugify(this.value)">
       <label>description</label><input id="e-desc" value="${esc(f.description||'')}">
       <label>type</label><select id="e-type">${['project','reference','user','feedback'].map(t=>`<option value="${t}"${t===f.type?' selected':''}>${t}</option>`).join('')}</select>
-      <label>domaine</label><input id="e-domain" list="e-domains" value="${esc((f.path||[])[0]||'')}"><datalist id="e-domains">${domainOptions((f.path||[])[0]||'')}</datalist>
+      <label>domaine</label><div class="combo"><input id="e-domain" value="${esc((f.path||[]).filter(s=>!isPart(s)).join('/'))}" autocomplete="off"><div id="e-domain-pop" class="combo-pop hidden"></div></div>
       <label>contenu</label><textarea id="e-body">${esc(body.trim())}</textarea>
     </div>
     <div style="margin-top:10px"><button class="btn" id="e-save">enregistrer</button>
       <button class="btn" id="e-cancel">annuler</button><span class="copied" id="e-msg" style="display:none"></span></div></div>`;
+  bindCombo('e-domain');
   $('e-cancel').onclick = () => { state.view='fact'; update(); };
   $('e-save').onclick = async () => {
     try {
       const meta = await api('PUT', '/api/fact?f=' + encodeURIComponent(f.file),
         { name:$('e-name').value.trim(), description:$('e-desc').value.trim(),
-          type:$('e-type').value, body:$('e-body').value, domain:$('e-domain').value.trim() });
+          type:$('e-type').value, body:$('e-body').value, domain:$('e-domain').value.trim().replace(/^\/+|\/+$/g,'') });
       applyMeta(meta);
-      const dom = $('e-domain').value.trim(), ty = $('e-type').value, nm = $('e-name').value.trim();
+      const dom = $('e-domain').value.trim().replace(/^\/+|\/+$/g,''), ty = $('e-type').value, nm = $('e-name').value.trim();
       state.factId = (dom && ty!=='user' && ty!=='feedback') ? dom+'/'+nm+'.md' : nm+'.md';
       state.view='fact'; update();
     } catch(e){ const m=$('e-msg'); m.style.display='inline'; m.style.color='var(--feedback)'; m.textContent = String(e.message||e); }
@@ -624,18 +683,14 @@ function viewIndex(){
     <div class="card"><div class="fbody">${DATA.index ? md(DATA.index) : '(vide)'}</div></div>`;
 }
 
-function domainOptions(sel){
-  const doms = [...new Set(DATA.facts.map(f => (f.path||[])[0]).filter(Boolean))].sort();
-  return doms.map(d => `<option value="${esc(d)}"${d===sel?' selected':''}>${esc(d)}</option>`).join('');
-}
 function viewDraft(){
   return `<h3 class="view-h">Créer un fait</h3>
     <p class="view-p">Écrit en <b>local</b> (brouillon). Pour le partager : <code style="color:var(--coral)">/memory-promote</code>.</p>
     <div class="form">
-      <label>nom (slug)</label><input id="d-name" placeholder="ex: regle-tva-export" autocomplete="off">
+      <label>nom (slug)</label><input id="d-name" placeholder="ex: regle-tva-export" autocomplete="off" oninput="this.value=slugify(this.value)">
       <label>description</label><input id="d-desc" placeholder="une ligne discriminante" autocomplete="off">
       <label>type</label><select id="d-type"><option value="project">project</option><option value="reference">reference</option><option value="user">user (perso)</option><option value="feedback">feedback (perso)</option></select>
-      <label>domaine</label><input id="d-domain" list="d-domains" placeholder="ex: mailing (vide = général)"><datalist id="d-domains">${domainOptions('')}</datalist>
+      <label>domaine</label><div class="combo"><input id="d-domain" placeholder="ex: mailing ou mailing/transactionnel (vide = général)" autocomplete="off"><div id="d-domain-pop" class="combo-pop hidden"></div></div>
       <label>contenu</label><textarea id="d-body" placeholder="Le fait, concis et autonome…"></textarea>
     </div>
     <div id="d-warn"></div>
@@ -666,13 +721,15 @@ function bindUsage(){ document.querySelectorAll('.usage .tl-step').forEach(el =>
   el.addEventListener('click', () => { state.usageStep = +el.dataset.step; renderMain(); })); }
 
 function bindDraft(){
+  bindCombo('d-domain');
   const v = id => ($(id) ? $(id).value.trim() : '');
   async function doCreate(){
+    const dom = v('d-domain').replace(/^\/+|\/+$/g,'');
     const meta = await api('POST', '/api/fact', { name:v('d-name'), description:v('d-desc'),
-      type:$('d-type').value, body:$('d-body').value, domain:v('d-domain') });
+      type:$('d-type').value, body:$('d-body').value, domain:dom });
     applyMeta(meta);
-    state.view='fact'; state.factId = (v('d-domain') && $('d-type').value!=='user' && $('d-type').value!=='feedback')
-      ? v('d-domain')+'/'+v('d-name')+'.md' : v('d-name')+'.md';
+    state.view='fact'; state.factId = (dom && $('d-type').value!=='user' && $('d-type').value!=='feedback')
+      ? dom+'/'+v('d-name')+'.md' : v('d-name')+'.md';
     update();
   }
   $('d-create').addEventListener('click', async () => {

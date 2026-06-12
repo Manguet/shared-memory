@@ -301,5 +301,68 @@ class ReshardSafetyTest(unittest.TestCase):
             self.assertEqual(len(bodies), 7)
 
 
+def _wf(vault, rel, name, desc="desc", typ="project"):
+    p = os.path.join(vault, rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    Path(p).write_text(
+        "---\nname: %s\ndescription: %s\nmetadata:\n  type: %s\n  reviewed: 2026-06-01\n---\nx\n"
+        % (name, desc, typ), encoding="utf-8")
+
+
+class SemanticSubdomainTest(unittest.TestCase):
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.v = self._t.name
+
+    def tearDown(self):
+        self._t.cleanup()
+
+    def test_semantic_subdomain_is_preserved(self):
+        _wf(self.v, "mailing/transactionnel/relances.md", "relances")
+        _wf(self.v, "mailing/audit.md", "audit")
+        R.reshard(self.v, max_entries=50)
+        self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "transactionnel", "relances.md")))
+        self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "audit.md")))
+        idx = Path(os.path.join(self.v, "index", "mailing.md")).read_text(encoding="utf-8")
+        self.assertIn("transactionnel", idx)
+        self.assertIn("index/mailing/transactionnel.md", idx)
+        sub = Path(os.path.join(self.v, "index", "mailing", "transactionnel.md")).read_text(encoding="utf-8")
+        self.assertIn("relances", sub)
+
+    def test_hybrid_partnn_inside_a_subdomain(self):
+        for i in range(5):
+            _wf(self.v, "mailing/transactionnel/f%d.md" % i, "f%d" % i)
+        R.reshard(self.v, max_entries=2)
+        parts = [d for d in os.listdir(os.path.join(self.v, "mailing", "transactionnel"))
+                 if d.startswith("part-")]
+        self.assertTrue(parts, "le sous-domaine qui déborde doit être scindé en part-NN")
+
+    def test_mixed_subdomain_and_overflowing_direct_facts(self):
+        _wf(self.v, "mailing/transactionnel/x.md", "x")
+        for i in range(5):
+            _wf(self.v, "mailing/d%d.md" % i, "d%d" % i)
+        R.reshard(self.v, max_entries=2)
+        self.assertTrue(os.path.isdir(os.path.join(self.v, "mailing", "transactionnel")))
+        parts = [d for d in os.listdir(os.path.join(self.v, "mailing")) if d.startswith("part-")]
+        self.assertTrue(parts)
+        idx = Path(os.path.join(self.v, "index", "mailing.md")).read_text(encoding="utf-8")
+        self.assertIn("transactionnel", idx)
+        self.assertTrue(any(("part-" in line) for line in idx.splitlines()))
+
+    def test_mechanical_partnn_is_rederived(self):
+        _wf(self.v, "mailing/part-01/a.md", "a")
+        _wf(self.v, "mailing/part-02/b.md", "b")
+        R.reshard(self.v, max_entries=50)
+        self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "a.md")))
+        self.assertTrue(os.path.isfile(os.path.join(self.v, "mailing", "b.md")))
+        self.assertFalse(os.path.isdir(os.path.join(self.v, "mailing", "part-01")))
+
+    def test_fact_name_colliding_with_subdomain_raises(self):
+        _wf(self.v, "mailing/transactionnel.md", "transactionnel")   # un fait nommé transactionnel
+        _wf(self.v, "mailing/transactionnel/x.md", "x")              # un sous-domaine homonyme
+        with self.assertRaises(ValueError):
+            R.reshard(self.v, max_entries=50)
+
+
 if __name__ == "__main__":
     unittest.main()
